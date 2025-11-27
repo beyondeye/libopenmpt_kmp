@@ -1,0 +1,14 @@
+the sources for libopenmpt where taken from here
+https://lib.openmpt.org/libopenmpt/2025/09/06/releases-0.8.3-0.7.16-0.6.25-0.5.39-0.4.51/
+
+SEE also
+libopenmpt and openmpt123 - FAQ
+https://lib.openmpt.org/libopenmpt/faq/
+
+about android ndk build used in libopenmpt:
+
+Android.mk  |  Android NDK  |  Android Developers
+https://developer.android.com/ndk/guides/android_mk
+
+Add C and C++ code to your project  |  Android Studio  |  Android Developers
+https://developer.android.com/studio/projects/add-native-code
