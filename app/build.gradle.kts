@@ -6,9 +6,7 @@ plugins {
 
 android {
     namespace = "com.beyondeye.openmptdemo"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.beyondeye.openmptdemo"
