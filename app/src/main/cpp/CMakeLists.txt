@@ -12,7 +12,7 @@ find_package(oboe REQUIRED CONFIG)
 # Add libopenmpt as an imported library
 add_library(openmpt SHARED IMPORTED)
 set_target_properties(openmpt PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../../../libopenmpt/build/intermediates/ndkBuild/release/obj/local/${ANDROID_ABI}/libopenmpt.so
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libopenmpt.so
 )
 
 # Include directories

@@ -63,6 +63,16 @@ android {
     }
 }
 
+// Ensure libopenmpt is built and exported before app's native build
+afterEvaluate {
+    tasks.matching { it.name.startsWith("buildCMake") }.configureEach {
+        dependsOn(":libopenmpt:exportPrebuiltLibs")
+    }
+    tasks.matching { it.name.startsWith("externalNativeBuild") }.configureEach {
+        dependsOn(":libopenmpt:exportPrebuiltLibs")
+    }
+}
+
 dependencies {
     // Libopenmpt module dependency
     implementation(project(":libopenmpt"))
