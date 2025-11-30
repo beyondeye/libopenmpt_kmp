@@ -24,3 +24,4 @@ local.properties
 /.idea/vcs.xml
 /libopenmpt/build/intermediates/
 /libopenmpt/build/outputs/logs/
+/libopenmpt/build/
