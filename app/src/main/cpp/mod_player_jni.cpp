@@ -153,6 +153,42 @@ Java_com_beyondeye_openmptdemo_player_ModPlayerNative_nativeSetStereoSeparation(
     }
 }
 
+JNIEXPORT void JNICALL
+Java_com_beyondeye_openmptdemo_player_ModPlayerNative_nativeSetTempoFactor(
+        JNIEnv* env, jobject thiz, jlong handle, jdouble factor) {
+    ModPlayerEngine* engine = handle_to_engine(handle);
+    if (engine) {
+        engine->setTempoFactor(factor);
+    }
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_beyondeye_openmptdemo_player_ModPlayerNative_nativeGetTempoFactor(
+        JNIEnv* env, jobject thiz, jlong handle) {
+    ModPlayerEngine* engine = handle_to_engine(handle);
+    if (!engine) return 1.0;
+    
+    return engine->getTempoFactor();
+}
+
+JNIEXPORT void JNICALL
+Java_com_beyondeye_openmptdemo_player_ModPlayerNative_nativeSetPitchFactor(
+        JNIEnv* env, jobject thiz, jlong handle, jdouble factor) {
+    ModPlayerEngine* engine = handle_to_engine(handle);
+    if (engine) {
+        engine->setPitchFactor(factor);
+    }
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_beyondeye_openmptdemo_player_ModPlayerNative_nativeGetPitchFactor(
+        JNIEnv* env, jobject thiz, jlong handle) {
+    ModPlayerEngine* engine = handle_to_engine(handle);
+    if (!engine) return 1.0;
+    
+    return engine->getPitchFactor();
+}
+
 // ========== State Queries ==========
 
 JNIEXPORT jboolean JNICALL

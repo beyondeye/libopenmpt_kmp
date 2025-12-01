@@ -52,6 +52,14 @@ class ModPlayerNative {
     
     external fun nativeSetStereoSeparation(handle: Long, percent: Int)
     
+    external fun nativeSetTempoFactor(handle: Long, factor: Double)
+    
+    external fun nativeGetTempoFactor(handle: Long): Double
+    
+    external fun nativeSetPitchFactor(handle: Long, factor: Double)
+    
+    external fun nativeGetPitchFactor(handle: Long): Double
+    
     // ========== State Queries ==========
     
     external fun nativeIsPlaying(handle: Long): Boolean

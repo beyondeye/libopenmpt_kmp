@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -76,7 +77,7 @@ fun ModPlayerScreen(
         Divider()
         
         // Metadata display
-        MetadataDisplay(metadata, playbackState)
+        // MetadataDisplay(metadata, playbackState)
         
         Spacer(Modifier.weight(1f))
         
@@ -97,6 +98,12 @@ fun ModPlayerScreen(
             onSeek = { viewModel.seek(it) },
             onPlayPause = { viewModel.togglePlayPause() },
             onStop = { viewModel.stop() }
+        )
+        
+        // Speed and Pitch Controls
+        SpeedPitchControls(
+            viewModel = viewModel,
+            enabled = playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading
         )
         
         // Loading indicator
@@ -252,6 +259,154 @@ fun PlaybackControls(
                     contentDescription = if (playbackState is PlaybackState.Playing) "Pause" else "Play",
                     modifier = Modifier.size(40.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun SpeedPitchControls(
+    viewModel: ModPlayerViewModel,
+    enabled: Boolean
+) {
+    var autoLoop by rememberSaveable { mutableStateOf(false) }
+    var playbackSpeed by rememberSaveable { mutableStateOf(1.0) }
+    var pitch by rememberSaveable { mutableStateOf(1.0) }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Playback Settings",
+                style = MaterialTheme.typography.titleMedium
+            )
+            
+            // Auto-loop toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Auto-Loop")
+                Switch(
+                    checked = autoLoop,
+                    onCheckedChange = {
+                        autoLoop = it
+                        viewModel.setAutoLoop(it)
+                    },
+                    enabled = enabled
+                )
+            }
+            
+            Divider()
+            
+            // Playback Speed Control
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Speed")
+                    Text(String.format("%.2fx", playbackSpeed))
+                }
+                
+                Slider(
+                    value = playbackSpeed.toFloat(),
+                    onValueChange = {
+                        playbackSpeed = it.toDouble()
+                        viewModel.setPlaybackSpeed(playbackSpeed)
+                    },
+                    valueRange = 0.25f..2.0f,
+                    enabled = enabled
+                )
+                
+                // Speed preset buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    listOf(0.5, 1.0, 1.5, 2.0).forEach { speed ->
+                        OutlinedButton(
+                            onClick = {
+                                playbackSpeed = speed
+                                viewModel.setPlaybackSpeed(speed)
+                            },
+                            enabled = enabled,
+                            modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                        ) {
+                            Text(String.format("%.1fx", speed))
+                        }
+                    }
+                }
+            }
+            
+            Divider()
+            
+            // Pitch Control
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Pitch")
+                    Text(String.format("%.2fx", pitch))
+                }
+                
+                Slider(
+                    value = pitch.toFloat(),
+                    onValueChange = {
+                        pitch = it.toDouble()
+                        viewModel.setPitch(pitch)
+                    },
+                    valueRange = 0.25f..2.0f,
+                    enabled = enabled
+                )
+                
+                // Pitch preset buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    listOf(0.5, 1.0, 1.5, 2.0).forEach { p ->
+                        OutlinedButton(
+                            onClick = {
+                                pitch = p
+                                viewModel.setPitch(p)
+                            },
+                            enabled = enabled,
+                            modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                        ) {
+                            Text(String.format("%.1fx", p))
+                        }
+                    }
+                }
+            }
+            
+            // Reset button
+            Button(
+                onClick = {
+                    playbackSpeed = 1.0
+                    pitch = 1.0
+                    viewModel.setPlaybackSpeed(1.0)
+                    viewModel.setPitch(1.0)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled && (playbackSpeed != 1.0 || pitch != 1.0)
+            ) {
+                Text("Reset to Defaults")
             }
         }
     }

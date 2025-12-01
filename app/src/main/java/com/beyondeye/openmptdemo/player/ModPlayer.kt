@@ -84,6 +84,30 @@ interface ModPlayer {
      */
     fun setStereoSeparation(percent: Int)
     
+    /**
+     * Set playback speed (tempo factor).
+     * @param speed Speed factor (0.25 to 2.0, 1.0 = normal)
+     */
+    fun setPlaybackSpeed(speed: Double)
+    
+    /**
+     * Get current playback speed.
+     * @return Current speed factor
+     */
+    fun getPlaybackSpeed(): Double
+    
+    /**
+     * Set pitch factor.
+     * @param pitch Pitch factor (0.25 to 2.0, 1.0 = normal)
+     */
+    fun setPitch(pitch: Double)
+    
+    /**
+     * Get current pitch factor.
+     * @return Current pitch factor
+     */
+    fun getPitch(): Double
+    
     // ========== State Queries ==========
     
     /**

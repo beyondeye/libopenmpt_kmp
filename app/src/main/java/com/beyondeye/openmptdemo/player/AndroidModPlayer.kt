@@ -146,6 +146,24 @@ class AndroidModPlayer : ModPlayer {
         native.nativeSetStereoSeparation(handle, percent)
     }
     
+    override fun setPlaybackSpeed(speed: Double) {
+        Log.d(TAG, "Setting playback speed to $speed")
+        native.nativeSetTempoFactor(handle, speed)
+    }
+    
+    override fun getPlaybackSpeed(): Double {
+        return native.nativeGetTempoFactor(handle)
+    }
+    
+    override fun setPitch(pitch: Double) {
+        Log.d(TAG, "Setting pitch to $pitch")
+        native.nativeSetPitchFactor(handle, pitch)
+    }
+    
+    override fun getPitch(): Double {
+        return native.nativeGetPitchFactor(handle)
+    }
+    
     // ========== State Queries ==========
     
     override val playbackState: PlaybackState

@@ -82,10 +82,34 @@ public:
     void setMasterGain(int32_t gainMillibel);
     
     /**
-     * Set stereo separation
+     * Set stereo separation.
      * @param percent Separation percentage (0-200, default 100)
      */
     void setStereoSeparation(int32_t percent);
+    
+    /**
+     * Set tempo factor (playback speed without changing pitch)
+     * @param factor Tempo factor (0.25 to 2.0, 1.0 = normal)
+     */
+    void setTempoFactor(double factor);
+    
+    /**
+     * Get current tempo factor
+     * @return Current tempo factor
+     */
+    double getTempoFactor() const;
+    
+    /**
+     * Set pitch factor (pitch without changing tempo)
+     * @param factor Pitch factor (0.25 to 2.0, 1.0 = normal)
+     */
+    void setPitchFactor(double factor);
+    
+    /**
+     * Get current pitch factor
+     * @return Current pitch factor
+     */
+    double getPitchFactor() const;
 
     // ========== State Queries ==========
     

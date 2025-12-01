@@ -25,3 +25,4 @@ local.properties
 /libopenmpt/build/intermediates/
 /libopenmpt/build/outputs/logs/
 /libopenmpt/build/
+/.idea/

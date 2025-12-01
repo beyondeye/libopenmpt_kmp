@@ -194,6 +194,29 @@ class ModPlayerViewModel : ViewModel() {
         player.setRepeatCount(if (isRepeat) -1 else 0)
     }
     
+    fun setAutoLoop(enabled: Boolean) {
+        player.setRepeatCount(if (enabled) -1 else 0)
+        Log.d(TAG, "Auto-loop ${if (enabled) "enabled" else "disabled"}")
+    }
+    
+    fun setPlaybackSpeed(speed: Double) {
+        player.setPlaybackSpeed(speed.coerceIn(0.25, 2.0))
+        Log.d(TAG, "Playback speed set to $speed")
+    }
+    
+    fun getPlaybackSpeed(): Double {
+        return player.getPlaybackSpeed()
+    }
+    
+    fun setPitch(pitch: Double) {
+        player.setPitch(pitch.coerceIn(0.25, 2.0))
+        Log.d(TAG, "Pitch set to $pitch")
+    }
+    
+    fun getPitch(): Double {
+        return player.getPitch()
+    }
+    
     // ========== Queries ==========
     
     fun getDuration(): Double = player.durationSeconds

@@ -205,6 +205,34 @@ void ModPlayerEngine::setStereoSeparation(int32_t percent) {
     LOGD("Stereo separation set to %d%%", percent);
 }
 
+void ModPlayerEngine::setTempoFactor(double factor) {
+    if (!module_) return;
+    
+    std::lock_guard<std::mutex> lock(moduleMutex_);
+    openmpt_module_ctl_set_floatingpoint(module_, "play.tempo_factor", factor);
+    LOGD("Tempo factor set to %.2f", factor);
+}
+
+double ModPlayerEngine::getTempoFactor() const {
+    if (!module_) return 1.0;
+    
+    return openmpt_module_ctl_get_floatingpoint(module_, "play.tempo_factor");
+}
+
+void ModPlayerEngine::setPitchFactor(double factor) {
+    if (!module_) return;
+    
+    std::lock_guard<std::mutex> lock(moduleMutex_);
+    openmpt_module_ctl_set_floatingpoint(module_, "play.pitch_factor", factor);
+    LOGD("Pitch factor set to %.2f", factor);
+}
+
+double ModPlayerEngine::getPitchFactor() const {
+    if (!module_) return 1.0;
+    
+    return openmpt_module_ctl_get_floatingpoint(module_, "play.pitch_factor");
+}
+
 // ========== State Queries ==========
 
 bool ModPlayerEngine::isPlaying() const {
