@@ -4,7 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -37,6 +45,67 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+fun CollapsibleSection(
+    title: String,
+    initiallyExpanded: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(initiallyExpanded) }
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = spring(),
+        label = "chevron_rotation"
+    )
+    
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Clickable header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded }
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    modifier = Modifier.rotate(rotationAngle)
+                )
+            }
+            
+            // Animated content
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ) {
+                    HorizontalDivider()
+                    Spacer(Modifier.height(12.dp))
+                    content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ModPlayerScreen(
     modifier: Modifier = Modifier,
     viewModel: ModPlayerViewModel = viewModel()
@@ -50,6 +119,7 @@ fun ModPlayerScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -61,25 +131,31 @@ fun ModPlayerScreen(
             modifier = Modifier.padding(top = 16.dp)
         )
         
-        // Load sample file button
-        Button(
-            onClick = {
-                viewModel.loadModuleFromAssets(context, "sm64_mainmenuss.xm")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+        // Load Module Files Section
+        CollapsibleSection(
+            title = "Load Module Files",
+            initiallyExpanded = true
         ) {
-            Icon(Icons.Default.Refresh, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Load Sample MOD File")
+            Button(
+                onClick = {
+                    viewModel.loadModuleFromAssets(context, "sm64_mainmenuss.xm")
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Load Sample MOD File")
+            }
         }
         
-        Divider()
-        
-        // Metadata display
-        // MetadataDisplay(metadata, playbackState)
-        
-        Spacer(Modifier.weight(1f))
+        // Track Information Section
+        CollapsibleSection(
+            title = "Track Information",
+            initiallyExpanded = false
+        ) {
+            MetadataDisplay(metadata, playbackState)
+        }
         
         // Playback info
         if (playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading) {
@@ -100,11 +176,16 @@ fun ModPlayerScreen(
             onStop = { viewModel.stop() }
         )
         
-        // Speed and Pitch Controls
-        SpeedPitchControls(
-            viewModel = viewModel,
-            enabled = playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading
-        )
+        // Speed and Pitch Controls Section
+        CollapsibleSection(
+            title = "Playback Settings",
+            initiallyExpanded = false
+        ) {
+            SpeedPitchControls(
+                viewModel = viewModel,
+                enabled = playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading
+            )
+        }
         
         // Loading indicator
         if (isLoading) {
@@ -273,22 +354,11 @@ fun SpeedPitchControls(
     var playbackSpeed by rememberSaveable { mutableStateOf(1.0) }
     var pitch by rememberSaveable { mutableStateOf(1.0) }
     
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Playback Settings",
-                style = MaterialTheme.typography.titleMedium
-            )
-            
-            // Auto-loop toggle
+        // Auto-loop toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -395,19 +465,18 @@ fun SpeedPitchControls(
                 }
             }
             
-            // Reset button
-            Button(
-                onClick = {
-                    playbackSpeed = 1.0
-                    pitch = 1.0
-                    viewModel.setPlaybackSpeed(1.0)
-                    viewModel.setPitch(1.0)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = enabled && (playbackSpeed != 1.0 || pitch != 1.0)
-            ) {
-                Text("Reset to Defaults")
-            }
+        // Reset button
+        Button(
+            onClick = {
+                playbackSpeed = 1.0
+                pitch = 1.0
+                viewModel.setPlaybackSpeed(1.0)
+                viewModel.setPitch(1.0)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled && (playbackSpeed != 1.0 || pitch != 1.0)
+        ) {
+            Text("Reset to Defaults")
         }
     }
 }
