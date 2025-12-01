@@ -63,7 +63,8 @@ android {
     }
 }
 
-// Ensure libopenmpt is built and exported before app's native build
+/*
+// depends of libopenmpt beuing built
 afterEvaluate {
     tasks.matching { it.name.startsWith("buildCMake") }.configureEach {
         dependsOn(":libopenmpt:exportPrebuiltLibs")
@@ -73,6 +74,34 @@ afterEvaluate {
     }
     tasks.matching { it.name.startsWith("merge") && it.name.contains("JniLibFolders") }.configureEach {
         dependsOn(":libopenmpt:exportPrebuiltLibs")
+    }
+ */
+// Ensure libopenmpt is built and exported before app's native build
+// with variant-specific dependencies (debug builds use debug libraries, release uses release)
+afterEvaluate {
+    tasks.matching { it.name.startsWith("buildCMake") }.configureEach {
+        val exportTask = when {
+            name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
+            name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
+            else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug
+        }
+        dependsOn(exportTask)
+    }
+    tasks.matching { it.name.startsWith("externalNativeBuild") }.configureEach {
+        val exportTask = when {
+            name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
+            name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
+            else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug
+        }
+        dependsOn(exportTask)
+    }
+    tasks.matching { it.name.startsWith("merge") && it.name.contains("JniLibFolders") }.configureEach {
+        val exportTask = when {
+            name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
+            name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
+            else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug
+        }
+        dependsOn(exportTask)
     }
 }
 
