@@ -71,6 +71,9 @@ afterEvaluate {
     tasks.matching { it.name.startsWith("externalNativeBuild") }.configureEach {
         dependsOn(":libopenmpt:exportPrebuiltLibs")
     }
+    tasks.matching { it.name.startsWith("merge") && it.name.contains("JniLibFolders") }.configureEach {
+        dependsOn(":libopenmpt:exportPrebuiltLibs")
+    }
 }
 
 dependencies {

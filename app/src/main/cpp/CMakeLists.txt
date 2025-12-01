@@ -12,19 +12,18 @@ find_package(oboe REQUIRED CONFIG)
 # Add libopenmpt as an imported library
 add_library(openmpt SHARED IMPORTED)
 set_target_properties(openmpt PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libopenmpt.so
-)
-
-# Include directories
-include_directories(
-    ${CMAKE_SOURCE_DIR}/../../../libopenmpt/src/main/cpp
-    ${CMAKE_SOURCE_DIR}/../../../libopenmpt/src/main/cpp/libopenmpt
+    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libopenmpt.so
 )
 
 # Main native library
 add_library(modplayer SHARED
     mod_player_jni.cpp
     ModPlayerEngine.cpp
+)
+
+# Add include directories to the target
+target_include_directories(modplayer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../libopenmpt/src/main/cpp
 )
 
 # Link libraries
