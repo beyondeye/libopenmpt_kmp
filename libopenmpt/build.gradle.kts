@@ -34,9 +34,15 @@ tasks.register<Copy>("exportPrebuiltLibs") {
     description = "Export built libopenmpt.so files to app/src/main/jniLibs"
     dependsOn("build")
     
-    from(layout.buildDirectory.dir("intermediates/ndkBuild/release/obj/local")) {
-        include("armeabi-v7a/libopenmpt.so")
-        include("arm64-v8a/libopenmpt.so")
+    // Find all libopenmpt.so files in the cxx/Release directory
+    from(layout.buildDirectory.dir("intermediates/cxx/Release")) {
+        include("**/obj/local/armeabi-v7a/libopenmpt.so")
+        include("**/obj/local/arm64-v8a/libopenmpt.so")
+        eachFile {
+            // Flatten the directory structure to maintain ABI folders
+            relativePath = RelativePath(true, *relativePath.segments.takeLast(2).toTypedArray())
+        }
+        includeEmptyDirs = false
     }
     into(rootProject.file("app/src/main/jniLibs"))
 }
