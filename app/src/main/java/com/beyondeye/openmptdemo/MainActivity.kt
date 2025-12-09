@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.beyondeye.openmptdemo.player.PlaybackState
+import com.beyondeye.openmpt.core.PlaybackState
 import com.beyondeye.openmptdemo.ui.theme.OpenMPTDemoTheme
 import kotlin.math.roundToInt
 
@@ -196,7 +196,7 @@ fun ModPlayerScreen(
 
 @Composable
 fun MetadataDisplay(
-    metadata: com.beyondeye.openmptdemo.player.ModMetadata?,
+    metadata: com.beyondeye.openmpt.core.ModMetadata?,
     playbackState: PlaybackState
 ) {
     Card(

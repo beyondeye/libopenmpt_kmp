@@ -16,19 +16,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-std=c++17"
-                arguments += listOf(
-                    "-DANDROID_STL=c++_shared"
-                )
-            }
-        }
-        
-        ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
-        }
     }
 
     buildTypes {
@@ -52,65 +39,12 @@ android {
     
     buildFeatures {
         compose = true
-        prefab = true  // Enable prefab for Oboe
-    }
-    
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
-}
-
-/*
-// depends of libopenmpt beuing built
-afterEvaluate {
-    tasks.matching { it.name.startsWith("buildCMake") }.configureEach {
-        dependsOn(":libopenmpt:exportPrebuiltLibs")
-    }
-    tasks.matching { it.name.startsWith("externalNativeBuild") }.configureEach {
-        dependsOn(":libopenmpt:exportPrebuiltLibs")
-    }
-    tasks.matching { it.name.startsWith("merge") && it.name.contains("JniLibFolders") }.configureEach {
-        dependsOn(":libopenmpt:exportPrebuiltLibs")
-    }
- */
-// Ensure libopenmpt is built and exported before app's native build
-// with variant-specific dependencies (debug builds use debug libraries, release uses release)
-afterEvaluate {
-    tasks.matching { it.name.startsWith("buildCMake") }.configureEach {
-        val exportTask = when {
-            name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
-            name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
-            else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug
-        }
-        dependsOn(exportTask)
-    }
-    tasks.matching { it.name.startsWith("externalNativeBuild") }.configureEach {
-        val exportTask = when {
-            name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
-            name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
-            else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug
-        }
-        dependsOn(exportTask)
-    }
-    tasks.matching { it.name.startsWith("merge") && it.name.contains("JniLibFolders") }.configureEach {
-        val exportTask = when {
-            name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
-            name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
-            else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug
-        }
-        dependsOn(exportTask)
     }
 }
 
 dependencies {
-    // Libopenmpt module dependency
-    implementation(project(":libopenmpt"))
-    
-    // Oboe for audio playback
-    implementation(libs.oboe)
+    // Shared module containing ModPlayer implementation
+    implementation(project(":shared"))
     
     // Core dependencies
     implementation(libs.androidx.core.ktx)

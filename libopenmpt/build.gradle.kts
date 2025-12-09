@@ -43,9 +43,9 @@ android {
     }
 }
 
-// Task to export built libraries to app's jniLibs (Debug variant)
+// Task to export built libraries to shared module's jniLibsDebug (Debug variant)
 tasks.register<Copy>("exportPrebuiltLibsDebug") {
-    description = "Export built libopenmpt.so files (Debug) to app/src/main/jniLibs"
+    description = "Export built libopenmpt.so files (Debug) to shared/src/androidMain/jniLibsDebug"
     dependsOn("externalNativeBuildDebug")
     
     // Find all libopenmpt.so files in the cxx/Debug directory
@@ -58,12 +58,12 @@ tasks.register<Copy>("exportPrebuiltLibsDebug") {
         }
         includeEmptyDirs = false
     }
-    into(rootProject.file("app/src/main/jniLibs"))
+    into(rootProject.file("shared/src/androidMain/jniLibsDebug"))
 }
 
-// Task to export built libraries to app's jniLibs (Release variant)
+// Task to export built libraries to shared module's jniLibsRelease (Release variant)
 tasks.register<Copy>("exportPrebuiltLibsRelease") {
-    description = "Export built libopenmpt.so files (Release) to app/src/main/jniLibs"
+    description = "Export built libopenmpt.so files (Release) to shared/src/androidMain/jniLibsRelease"
     dependsOn("externalNativeBuildRelease")
     
     // Find all libopenmpt.so files in the cxx/Release directory
@@ -76,11 +76,11 @@ tasks.register<Copy>("exportPrebuiltLibsRelease") {
         }
         includeEmptyDirs = false
     }
-    into(rootProject.file("app/src/main/jniLibs"))
+    into(rootProject.file("shared/src/androidMain/jniLibsRelease"))
 }
 
 // Convenience task to export both variants
 tasks.register("exportPrebuiltLibs") {
-    description = "Export both Debug and Release libopenmpt.so files to app/src/main/jniLibs"
+    description = "Export both Debug and Release libopenmpt.so files to shared/src/androidMain/jniLibs"
     dependsOn("exportPrebuiltLibsDebug", "exportPrebuiltLibsRelease")
 }

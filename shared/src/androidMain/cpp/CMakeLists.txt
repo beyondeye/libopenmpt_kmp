@@ -9,18 +9,31 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find Oboe package (using prefab)
 find_package(oboe REQUIRED CONFIG)
 
+# Determine the library path based on build type
+# Debug builds use jniLibsDebug, Release builds use jniLibsRelease
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(OPENMPT_JNILIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibsDebug")
+else()
+    set(OPENMPT_JNILIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibsRelease")
+endif()
+
 # Add libopenmpt as an imported library
-# The jniLibs are in the app module, but we'll reference them from the shared module
 add_library(openmpt SHARED IMPORTED)
 set_target_properties(openmpt PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/debug/out/${ANDROID_ABI}/libopenmpt.so
+    IMPORTED_LOCATION ${OPENMPT_JNILIB_DIR}/${ANDROID_ABI}/libopenmpt.so
 )
 
-# Fallback for pre-built libs location
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/debug/out/${ANDROID_ABI}/libopenmpt.so)
-    set_target_properties(openmpt PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../../app/src/main/jniLibs/${ANDROID_ABI}/libopenmpt.so
-    )
+# Fallback: try merged_jni_libs if direct path doesn't exist yet
+if(NOT EXISTS ${OPENMPT_JNILIB_DIR}/${ANDROID_ABI}/libopenmpt.so)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set_target_properties(openmpt PROPERTIES
+            IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/debug/out/${ANDROID_ABI}/libopenmpt.so
+        )
+    else()
+        set_target_properties(openmpt PROPERTIES
+            IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/release/out/${ANDROID_ABI}/libopenmpt.so
+        )
+    endif()
 endif()
 
 # Main native library
@@ -30,8 +43,13 @@ add_library(modplayer SHARED
 )
 
 # Add include directories to the target
+# Path explanation: from shared/src/androidMain/cpp/ we go up 4 levels to reach project root
+#   .. -> shared/src/androidMain/
+#   ../.. -> shared/src/
+#   ../../.. -> shared/
+#   ../../../.. -> project root (/home/ddt/Work/OpenMPTDemo)
 target_include_directories(modplayer PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../libopenmpt/src/main/cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../libopenmpt/src/main/cpp
 )
 
 # Link libraries

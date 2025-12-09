@@ -5,10 +5,10 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.beyondeye.openmptdemo.player.AndroidModPlayer
-import com.beyondeye.openmptdemo.player.ModMetadata
-import com.beyondeye.openmptdemo.player.ModPlayer
-import com.beyondeye.openmptdemo.player.PlaybackState
+import com.beyondeye.openmpt.core.AndroidModPlayer
+import com.beyondeye.openmpt.core.ModMetadata
+import com.beyondeye.openmpt.core.ModPlayer
+import com.beyondeye.openmpt.core.PlaybackState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
