@@ -9,6 +9,7 @@ import com.beyondeye.openmpt.core.AndroidModPlayer
 import com.beyondeye.openmpt.core.ModMetadata
 import com.beyondeye.openmpt.core.ModPlayer
 import com.beyondeye.openmpt.core.PlaybackState
+import com.beyondeye.openmpt.core.createModPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,7 +26,7 @@ import java.io.InputStream
  */
 class ModPlayerViewModel : ViewModel() {
     
-    private val player: ModPlayer = AndroidModPlayer()
+    private val player: ModPlayer = createModPlayer()
     
     // Observe player state
     val playbackState: StateFlow<PlaybackState> = player.playbackStateFlow.stateIn(
