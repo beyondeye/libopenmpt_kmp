@@ -7,6 +7,9 @@ plugins {
 }
 
 kotlin {
+    // Apply default hierarchy template to create intermediate source sets (iosMain, appleMain, etc.)
+    applyDefaultHierarchyTemplate()
+    
     // Android target
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
@@ -46,14 +49,8 @@ kotlin {
             }
         }
         
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-        }
+        // iosMain is automatically created by the Default Hierarchy Template
+        val iosMain by getting
         
         val desktopMain by getting {
             dependencies {
@@ -68,6 +65,14 @@ kotlin {
 android {
     namespace = "com.beyondeye.openmpt.core"
     compileSdk = 36
+    
+    // Map KMP source set directories to Android source sets
+    // This ensures jniLibs from androidMain are properly packaged into the AAR/APK
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("src/androidMain/jniLibs")
+        }
+    }
     
     defaultConfig {
         minSdk = 24
