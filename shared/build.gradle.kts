@@ -102,15 +102,9 @@ android {
         }
     }
     
-    // Configure variant-specific jniLibs directories
-    sourceSets {
-        getByName("debug") {
-            jniLibs.srcDirs("src/androidMain/jniLibsDebug")
-        }
-        getByName("release") {
-            jniLibs.srcDirs("src/androidMain/jniLibsRelease")
-        }
-    }
+    // jniLibs are automatically picked up from src/androidMain/jniLibs by KMP
+    // Note: Using a single jniLibs directory (not debug/release specific) is required
+    // for proper packaging of native libraries in the AAR when using KMP.
 }
 
 dependencies {

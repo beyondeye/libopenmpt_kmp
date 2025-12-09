@@ -9,13 +9,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find Oboe package (using prefab)
 find_package(oboe REQUIRED CONFIG)
 
-# Determine the library path based on build type
-# Debug builds use jniLibsDebug, Release builds use jniLibsRelease
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(OPENMPT_JNILIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibsDebug")
-else()
-    set(OPENMPT_JNILIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibsRelease")
-endif()
+# Path to libopenmpt.so - using single jniLibs directory for KMP compatibility
+# Note: In KMP projects, using a single jniLibs directory (not debug/release specific)
+# is required for proper packaging of native libraries in the AAR.
+set(OPENMPT_JNILIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs")
 
 # Add libopenmpt as an imported library
 add_library(openmpt SHARED IMPORTED)
@@ -25,15 +22,9 @@ set_target_properties(openmpt PROPERTIES
 
 # Fallback: try merged_jni_libs if direct path doesn't exist yet
 if(NOT EXISTS ${OPENMPT_JNILIB_DIR}/${ANDROID_ABI}/libopenmpt.so)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set_target_properties(openmpt PROPERTIES
-            IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/debug/out/${ANDROID_ABI}/libopenmpt.so
-        )
-    else()
-        set_target_properties(openmpt PROPERTIES
-            IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/release/out/${ANDROID_ABI}/libopenmpt.so
-        )
-    endif()
+    set_target_properties(openmpt PROPERTIES
+        IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/intermediates/merged_jni_libs/debug/out/${ANDROID_ABI}/libopenmpt.so
+    )
 endif()
 
 # Main native library
