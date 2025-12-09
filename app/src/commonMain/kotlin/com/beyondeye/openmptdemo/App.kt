@@ -1,45 +1,179 @@
 package com.beyondeye.openmptdemo
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.beyondeye.openmpt.core.ModMetadata
 import com.beyondeye.openmpt.core.PlaybackState
+import com.beyondeye.openmptdemo.resources.Res
 import com.beyondeye.openmptdemo.ui.theme.OpenMPTDemoTheme
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            OpenMPTDemoTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ModPlayerScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+/**
+ * Main application composable for the OpenMPT Demo player.
+ * This is the entry point for the Compose Multiplatform UI.
+ */
+@Composable
+fun App() {
+    OpenMPTDemoTheme {
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            ModPlayerScreen(
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalResourceApi::class)
+@Composable
+fun ModPlayerScreen(
+    modifier: Modifier = Modifier,
+    viewModel: ModPlayerViewModel = koinViewModel()
+) {
+    val scope = rememberCoroutineScope()
+    val playbackState by viewModel.playbackState.collectAsState()
+    val position by viewModel.position.collectAsState()
+    val metadata by viewModel.metadata.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Title
+        Text(
+            text = "OpenMPT Demo Player",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        
+        // Load Module Files Section
+        CollapsibleSection(
+            title = "Load Module Files",
+            initiallyExpanded = true
+        ) {
+            Button(
+                onClick = {
+                    scope.launch {
+                        try {
+                            val bytes = Res.readBytes("files/sm64_mainmenuss.xm")
+                            viewModel.loadModule(bytes)
+                        } catch (e: Exception) {
+                            // Handle error - resource not found
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Load Sample MOD File")
             }
+        }
+        
+        // Track Information Section
+        CollapsibleSection(
+            title = "Track Information",
+            initiallyExpanded = false
+        ) {
+            MetadataDisplay(metadata, playbackState)
+        }
+        
+        // Playback info
+        if (playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading) {
+            Text(
+                text = viewModel.getPlaybackInfo(),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+        }
+        
+        // Position and seek bar
+        PlaybackControls(
+            playbackState = playbackState,
+            position = position,
+            duration = viewModel.getDuration(),
+            onSeek = { viewModel.seek(it) },
+            onPlayPause = { viewModel.togglePlayPause() },
+            onStop = { viewModel.stop() }
+        )
+        
+        // Speed and Pitch Controls Section
+        CollapsibleSection(
+            title = "Playback Settings",
+            initiallyExpanded = false
+        ) {
+            SpeedPitchControls(
+                viewModel = viewModel,
+                enabled = playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading
+            )
+        }
+        
+        // Loading indicator
+        if (isLoading) {
+            CircularProgressIndicator()
         }
     }
 }
@@ -106,97 +240,8 @@ fun CollapsibleSection(
 }
 
 @Composable
-fun ModPlayerScreen(
-    modifier: Modifier = Modifier,
-    viewModel: ModPlayerViewModel = viewModel()
-) {
-    val context = LocalContext.current
-    val playbackState by viewModel.playbackState.collectAsState()
-    val position by viewModel.position.collectAsState()
-    val metadata by viewModel.metadata.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Title
-        Text(
-            text = "OpenMPT Demo Player",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 16.dp)
-        )
-        
-        // Load Module Files Section
-        CollapsibleSection(
-            title = "Load Module Files",
-            initiallyExpanded = true
-        ) {
-            Button(
-                onClick = {
-                    viewModel.loadModuleFromAssets(context, "sm64_mainmenuss.xm")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading
-            ) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Load Sample MOD File")
-            }
-        }
-        
-        // Track Information Section
-        CollapsibleSection(
-            title = "Track Information",
-            initiallyExpanded = false
-        ) {
-            MetadataDisplay(metadata, playbackState)
-        }
-        
-        // Playback info
-        if (playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading) {
-            Text(
-                text = viewModel.getPlaybackInfo(),
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center
-            )
-        }
-        
-        // Position and seek bar
-        PlaybackControls(
-            playbackState = playbackState,
-            position = position,
-            duration = viewModel.getDuration(),
-            onSeek = { viewModel.seek(it) },
-            onPlayPause = { viewModel.togglePlayPause() },
-            onStop = { viewModel.stop() }
-        )
-        
-        // Speed and Pitch Controls Section
-        CollapsibleSection(
-            title = "Playback Settings",
-            initiallyExpanded = false
-        ) {
-            SpeedPitchControls(
-                viewModel = viewModel,
-                enabled = playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading
-            )
-        }
-        
-        // Loading indicator
-        if (isLoading) {
-            CircularProgressIndicator()
-        }
-    }
-}
-
-@Composable
 fun MetadataDisplay(
-    metadata: com.beyondeye.openmpt.core.ModMetadata?,
+    metadata: ModMetadata?,
     playbackState: PlaybackState
 ) {
     Card(
@@ -248,7 +293,7 @@ fun MetadataDisplay(
                                 color = MaterialTheme.colorScheme.secondary
                             )
                         }
-                        Divider()
+                        HorizontalDivider()
                         Text("Format: ${meta.typeLong.ifEmpty { meta.type }}")
                         if (meta.tracker.isNotEmpty()) {
                             Text("Tracker: ${meta.tracker}")
@@ -359,111 +404,111 @@ fun SpeedPitchControls(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Auto-loop toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Auto-Loop")
+            Switch(
+                checked = autoLoop,
+                onCheckedChange = {
+                    autoLoop = it
+                    viewModel.setAutoLoop(it)
+                },
+                enabled = enabled
+            )
+        }
+        
+        HorizontalDivider()
+        
+        // Playback Speed Control
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Auto-Loop")
-                Switch(
-                    checked = autoLoop,
-                    onCheckedChange = {
-                        autoLoop = it
-                        viewModel.setAutoLoop(it)
-                    },
-                    enabled = enabled
-                )
+                Text("Speed")
+                Text(formatDecimal(playbackSpeed, 2) + "x")
             }
             
-            Divider()
+            Slider(
+                value = playbackSpeed.toFloat(),
+                onValueChange = {
+                    playbackSpeed = it.toDouble()
+                    viewModel.setPlaybackSpeed(playbackSpeed)
+                },
+                valueRange = 0.25f..2.0f,
+                enabled = enabled
+            )
             
-            // Playback Speed Control
-            Column(
+            // Speed preset buttons
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Speed")
-                    Text(String.format("%.2fx", playbackSpeed))
-                }
-                
-                Slider(
-                    value = playbackSpeed.toFloat(),
-                    onValueChange = {
-                        playbackSpeed = it.toDouble()
-                        viewModel.setPlaybackSpeed(playbackSpeed)
-                    },
-                    valueRange = 0.25f..2.0f,
-                    enabled = enabled
-                )
-                
-                // Speed preset buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    listOf(0.5, 1.0, 1.5, 2.0).forEach { speed ->
-                        OutlinedButton(
-                            onClick = {
-                                playbackSpeed = speed
-                                viewModel.setPlaybackSpeed(speed)
-                            },
-                            enabled = enabled,
-                            modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
-                        ) {
-                            Text(String.format("%.1fx", speed))
-                        }
+                listOf(0.5, 1.0, 1.5, 2.0).forEach { speed ->
+                    OutlinedButton(
+                        onClick = {
+                            playbackSpeed = speed
+                            viewModel.setPlaybackSpeed(speed)
+                        },
+                        enabled = enabled,
+                        modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                    ) {
+                        Text(formatDecimal(speed, 1) + "x")
                     }
                 }
             }
-            
-            Divider()
-            
-            // Pitch Control
-            Column(
+        }
+        
+        HorizontalDivider()
+        
+        // Pitch Control
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Pitch")
-                    Text(String.format("%.2fx", pitch))
-                }
-                
-                Slider(
-                    value = pitch.toFloat(),
-                    onValueChange = {
-                        pitch = it.toDouble()
-                        viewModel.setPitch(pitch)
-                    },
-                    valueRange = 0.25f..2.0f,
-                    enabled = enabled
-                )
-                
-                // Pitch preset buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    listOf(0.5, 1.0, 1.5, 2.0).forEach { p ->
-                        OutlinedButton(
-                            onClick = {
-                                pitch = p
-                                viewModel.setPitch(p)
-                            },
-                            enabled = enabled,
-                            modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
-                        ) {
-                            Text(String.format("%.1fx", p))
-                        }
+                Text("Pitch")
+                Text(formatDecimal(pitch, 2) + "x")
+            }
+            
+            Slider(
+                value = pitch.toFloat(),
+                onValueChange = {
+                    pitch = it.toDouble()
+                    viewModel.setPitch(pitch)
+                },
+                valueRange = 0.25f..2.0f,
+                enabled = enabled
+            )
+            
+            // Pitch preset buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                listOf(0.5, 1.0, 1.5, 2.0).forEach { p ->
+                    OutlinedButton(
+                        onClick = {
+                            pitch = p
+                            viewModel.setPitch(p)
+                        },
+                        enabled = enabled,
+                        modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                    ) {
+                        Text(formatDecimal(p, 1) + "x")
                     }
                 }
             }
+        }
             
         // Reset button
         Button(
@@ -481,9 +526,32 @@ fun SpeedPitchControls(
     }
 }
 
+/**
+ * Format time in seconds to "m:ss" format
+ */
 fun formatTime(seconds: Double): String {
     val totalSeconds = seconds.roundToInt()
     val minutes = totalSeconds / 60
     val secs = totalSeconds % 60
-    return String.format("%d:%02d", minutes, secs)
+    return "$minutes:${secs.toString().padStart(2, '0')}"
+}
+
+/**
+ * Format a decimal number with specified decimal places (multiplatform alternative to String.format)
+ */
+fun formatDecimal(value: Double, decimals: Int): String {
+    val multiplier = 10.0.pow(decimals)
+    val rounded = (value * multiplier).roundToInt() / multiplier
+    val str = rounded.toString()
+    val dotIndex = str.indexOf('.')
+    return if (dotIndex == -1) {
+        str + "." + "0".repeat(decimals)
+    } else {
+        val currentDecimals = str.length - dotIndex - 1
+        if (currentDecimals < decimals) {
+            str + "0".repeat(decimals - currentDecimals)
+        } else {
+            str.substring(0, dotIndex + decimals + 1)
+        }
+    }
 }

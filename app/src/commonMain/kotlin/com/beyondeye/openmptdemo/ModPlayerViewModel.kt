@@ -1,32 +1,35 @@
 package com.beyondeye.openmptdemo
 
-import android.content.Context
-import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.beyondeye.openmpt.core.AndroidModPlayer
 import com.beyondeye.openmpt.core.ModMetadata
 import com.beyondeye.openmpt.core.ModPlayer
 import com.beyondeye.openmpt.core.PlaybackState
-import com.beyondeye.openmpt.core.createModPlayer
+import de.halfbit.logger.d
+import de.halfbit.logger.e
+import de.halfbit.logger.i
+import de.halfbit.logger.w
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.InputStream
 
 /**
  * ViewModel for the MOD player UI.
  * Manages the player state and provides UI actions.
+ * 
+ * This is a multiplatform ViewModel that works on Android, iOS, Desktop, and Web.
  */
-class ModPlayerViewModel : ViewModel() {
+class ModPlayerViewModel(
+    private val player: ModPlayer
+) : ViewModel() {
     
-    private val player: ModPlayer = createModPlayer()
+    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     // Observe player state
     val playbackState: StateFlow<PlaybackState> = player.playbackStateFlow.stateIn(
@@ -50,69 +53,29 @@ class ModPlayerViewModel : ViewModel() {
     val metadata: StateFlow<ModMetadata?> = _metadata.asStateFlow()
     
     init {
-        Log.d(TAG, "ModPlayerViewModel created")
+        d(TAG) { "ModPlayerViewModel created" }
     }
     
     // ========== File Loading ==========
     
     /**
-     * Load a MOD file from a Uri (e.g., file picker result)
+     * Load a MOD file from a byte array
      */
-    fun loadModuleFromUri(context: Context, uri: Uri) {
+    fun loadModule(data: ByteArray) {
         viewModelScope.launch {
             _isLoading.value = true
             
             try {
-                val data = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        input.readBytes()
-                    } ?: throw Exception("Failed to open file")
-                }
-                
-                val success = withContext(Dispatchers.Default) {
-                    player.loadModule(data)
-                }
+                val success = player.loadModule(data)
                 
                 if (success) {
                     _metadata.value = player.getMetadata()
-                    Log.i(TAG, "Module loaded successfully from URI")
+                    i(TAG) { "Module loaded successfully" }
                 } else {
-                    Log.e(TAG, "Failed to load module from URI")
+                    e(TAG) { "Failed to load module" }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading module from URI", e)
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-    
-    /**
-     * Load a MOD file from assets folder
-     */
-    fun loadModuleFromAssets(context: Context, assetPath: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            
-            try {
-                val data = withContext(Dispatchers.IO) {
-                    context.assets.open(assetPath).use { input ->
-                        input.readBytes()
-                    }
-                }
-                
-                val success = withContext(Dispatchers.Default) {
-                    player.loadModule(data)
-                }
-                
-                if (success) {
-                    _metadata.value = player.getMetadata()
-                    Log.i(TAG, "Module loaded successfully from assets: $assetPath")
-                } else {
-                    Log.e(TAG, "Failed to load module from assets: $assetPath")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading module from assets", e)
+                e(TAG) { "Error loading module: ${e.message}" }
             } finally {
                 _isLoading.value = false
             }
@@ -127,18 +90,16 @@ class ModPlayerViewModel : ViewModel() {
             _isLoading.value = true
             
             try {
-                val success = withContext(Dispatchers.Default) {
-                    player.loadModuleFromPath(path)
-                }
+                val success = player.loadModuleFromPath(path)
                 
                 if (success) {
                     _metadata.value = player.getMetadata()
-                    Log.i(TAG, "Module loaded successfully from path: $path")
+                    i(TAG) { "Module loaded successfully from path: $path" }
                 } else {
-                    Log.e(TAG, "Failed to load module from path: $path")
+                    e(TAG) { "Failed to load module from path: $path" }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading module from path", e)
+                e(TAG) { "Error loading module from path: ${e.message}" }
             } finally {
                 _isLoading.value = false
             }
@@ -151,7 +112,7 @@ class ModPlayerViewModel : ViewModel() {
         try {
             player.play()
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing", e)
+            e(TAG) { "Error playing: ${e.message}" }
         }
     }
     
@@ -159,7 +120,7 @@ class ModPlayerViewModel : ViewModel() {
         try {
             player.pause()
         } catch (e: Exception) {
-            Log.e(TAG, "Error pausing", e)
+            e(TAG) { "Error pausing: ${e.message}" }
         }
     }
     
@@ -167,7 +128,7 @@ class ModPlayerViewModel : ViewModel() {
         try {
             player.stop()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping", e)
+            e(TAG) { "Error stopping: ${e.message}" }
         }
     }
     
@@ -177,7 +138,7 @@ class ModPlayerViewModel : ViewModel() {
             is PlaybackState.Loaded,
             is PlaybackState.Paused,
             is PlaybackState.Stopped -> play()
-            else -> Log.w(TAG, "Cannot toggle play/pause in current state")
+            else -> w(TAG) { "Cannot toggle play/pause in current state" }
         }
     }
     
@@ -185,7 +146,7 @@ class ModPlayerViewModel : ViewModel() {
         try {
             player.seek(positionSeconds)
         } catch (e: Exception) {
-            Log.e(TAG, "Error seeking", e)
+            e(TAG) { "Error seeking: ${e.message}" }
         }
     }
     
@@ -197,12 +158,12 @@ class ModPlayerViewModel : ViewModel() {
     
     fun setAutoLoop(enabled: Boolean) {
         player.setRepeatCount(if (enabled) -1 else 0)
-        Log.d(TAG, "Auto-loop ${if (enabled) "enabled" else "disabled"}")
+        d(TAG) { "Auto-loop ${if (enabled) "enabled" else "disabled"}" }
     }
     
     fun setPlaybackSpeed(speed: Double) {
         player.setPlaybackSpeed(speed.coerceIn(0.25, 2.0))
-        Log.d(TAG, "Playback speed set to $speed")
+        d(TAG) { "Playback speed set to $speed" }
     }
     
     fun getPlaybackSpeed(): Double {
@@ -211,7 +172,7 @@ class ModPlayerViewModel : ViewModel() {
     
     fun setPitch(pitch: Double) {
         player.setPitch(pitch.coerceIn(0.25, 2.0))
-        Log.d(TAG, "Pitch set to $pitch")
+        d(TAG) { "Pitch set to $pitch" }
     }
     
     fun getPitch(): Double {
@@ -239,8 +200,9 @@ class ModPlayerViewModel : ViewModel() {
     // ========== Lifecycle ==========
     
     override fun onCleared() {
+        d(TAG) { "ModPlayerViewModel cleared, releasing player" }
         super.onCleared()
-        Log.d(TAG, "ModPlayerViewModel cleared, releasing player")
+        viewModelScope.cancel()
         player.release()
     }
     

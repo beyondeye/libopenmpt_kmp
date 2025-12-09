@@ -23,4 +23,3 @@ rootProject.name = "OpenMPTDemo"
 include(":app")
 include(":libopenmpt")
 include(":shared")
-include(":composeApp")

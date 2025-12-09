@@ -1,43 +1,58 @@
-# OpenMPT Demo - Android MOD Music Player
+# OpenMPT Demo - Multiplatform MOD Music Player
 
-An Android application demonstrating native MOD music playback using libopenmpt and Oboe, with a clean architecture designed for future Kotlin Multiplatform expansion.
+A **Compose Multiplatform** application demonstrating native MOD music playback using libopenmpt. Built with Kotlin Multiplatform (KMP), supporting Android, iOS, Desktop (JVM), and Web (WASM/JS).
 
 ## Features
 
 - **Native MOD Playback**: Uses libopenmpt C library for authentic tracker music reproduction
-- **Low-Latency Audio**: Oboe library for professional-quality audio output
-- **Platform-Agnostic Design**: Clean abstraction layer ready for KMP migration
-- **Modern Android UI**: Jetpack Compose Material3 interface
+- **Cross-Platform UI**: Compose Multiplatform for consistent UI across all platforms
+- **Dependency Injection**: Koin for platform-specific ModPlayer injection
 - **Reactive State Management**: Kotlin Flows for real-time UI updates
 - **Full Playback Control**: Play, pause, stop, and seek functionality
 - **Metadata Display**: Shows module information (title, artist, format, etc.)
+- **Playback Settings**: Speed and pitch control with presets
+
+## Supported Platforms
+
+| Platform | Status | Audio Backend |
+|----------|--------|---------------|
+| Android | ✅ Ready | Oboe + libopenmpt |
+| Desktop (JVM) | 🚧 Stub | To be implemented |
+| iOS | 🚧 Stub | To be implemented |
+| Web (WASM/JS) | 🚧 Stub | To be implemented |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  UI Layer (Jetpack Compose)                         │
-│  ├─ MainActivity                                     │
-│  └─ ModPlayerViewModel                              │
+│  UI Layer (Compose Multiplatform)                   │
+│  ├─ App.kt (common entry point)                     │
+│  ├─ ModPlayerScreen                                 │
+│  └─ ModPlayerViewModel (Koin-injected)              │
 └──────────────────┬──────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────┐
-│  Abstraction Layer (KMP-Ready)                      │
-│  ├─ ModPlayer interface                             │
-│  ├─ PlaybackState sealed class                      │
-│  ├─ ModMetadata data class                          │
-│  └─ AndroidModPlayer implementation                 │
+│  Dependency Injection (Koin 4.1.1)                  │
+│  ├─ appModule                                       │
+│  ├─ factory<ModPlayer> { createModPlayer() }        │
+│  └─ viewModel { ModPlayerViewModel(get()) }         │
 └──────────────────┬──────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────┐
-│  Native Layer (C++/JNI)                             │
-│  ├─ ModPlayerNative (JNI wrapper)                   │
+│  Shared Module (KMP)                                │
+│  ├─ ModPlayer interface (commonMain)                │
+│  ├─ createModPlayer() expect/actual factory         │
+│  └─ Platform implementations:                       │
+│      ├─ AndroidModPlayer (JNI + Oboe)               │
+│      ├─ IosModPlayer (stub)                         │
+│      ├─ DesktopModPlayer (stub)                     │
+│      └─ WasmModPlayer (stub)                        │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│  Native Layer (Android)                             │
 │  ├─ mod_player_jni.cpp (JNI bridge)                 │
-│  └─ ModPlayerEngine (C++ engine)                    │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│  External Libraries                                 │
+│  ├─ ModPlayerEngine.cpp (C++ engine)                │
 │  ├─ libopenmpt (MOD rendering)                      │
 │  └─ Oboe (Audio output)                             │
 └─────────────────────────────────────────────────────┘
@@ -46,23 +61,48 @@ An Android application demonstrating native MOD music playback using libopenmpt 
 ## Project Structure
 
 ```
-app/src/main/
-├── assets/
-│   └── sm64_mainmenuss.xm              # Sample MOD file
-├── cpp/
-│   ├── CMakeLists.txt                  # Native build configuration
-│   ├── ModPlayerEngine.h/cpp           # C++ audio engine
-│   └── mod_player_jni.cpp              # JNI bridge
-└── java/com/beyondeye/openmptdemo/
-    ├── MainActivity.kt                 # Compose UI
-    ├── ModPlayerViewModel.kt           # State management
-    └── player/
-        ├── ModPlayer.kt                # Platform-agnostic interface
-        ├── PlaybackState.kt            # State sealed class
-        ├── ModMetadata.kt              # Metadata data class
-        ├── ModPlayerException.kt       # Exception hierarchy
-        ├── ModPlayerNative.kt          # JNI wrapper
-        └── AndroidModPlayer.kt         # Android implementation
+app/
+├── src/
+│   ├── commonMain/kotlin/com/beyondeye/openmptdemo/
+│   │   ├── App.kt                      # Main Compose UI
+│   │   ├── ModPlayerViewModel.kt       # Shared ViewModel
+│   │   ├── di/
+│   │   │   └── AppModule.kt            # Koin DI module
+│   │   └── ui/theme/
+│   │       ├── Color.kt
+│   │       ├── Theme.kt
+│   │       └── Type.kt
+│   ├── commonMain/composeResources/files/
+│   │   └── sm64_mainmenuss.xm          # Sample MOD file
+│   ├── androidMain/kotlin/com/beyondeye/openmptdemo/
+│   │   ├── MainActivity.kt             # Android entry point
+│   │   └── OpenMPTDemoApp.kt           # Application class (Koin init)
+│   ├── desktopMain/kotlin/com/beyondeye/openmptdemo/
+│   │   └── main.kt                     # Desktop entry point
+│   ├── wasmJsMain/kotlin/com/beyondeye/openmptdemo/
+│   │   └── main.kt                     # WASM/JS entry point
+│   └── iosMain/kotlin/com/beyondeye/openmptdemo/
+│       └── MainViewController.kt       # iOS entry point
+
+shared/
+├── src/
+│   ├── commonMain/kotlin/com/beyondeye/openmpt/core/
+│   │   ├── ModPlayer.kt                # Platform-agnostic interface
+│   │   ├── ModPlayerFactory.kt         # expect fun createModPlayer()
+│   │   ├── PlaybackState.kt
+│   │   ├── ModMetadata.kt
+│   │   └── ModPlayerException.kt
+│   ├── androidMain/
+│   │   ├── kotlin/.../AndroidModPlayer.kt
+│   │   ├── kotlin/.../ModPlayerNative.kt
+│   │   ├── kotlin/.../ModPlayerFactory.android.kt
+│   │   ├── cpp/                        # JNI native code
+│   │   └── jniLibs/                    # Prebuilt libopenmpt.so
+│   ├── iosMain/kotlin/.../
+│   ├── desktopMain/kotlin/.../
+│   └── wasmJsMain/kotlin/.../
+
+libopenmpt/                             # Native library build module
 ```
 
 ## Building the Project
@@ -70,53 +110,79 @@ app/src/main/
 ### Prerequisites
 
 - Android Studio Hedgehog or newer
-- Android NDK (configured in SDK Manager)
+- Android NDK (for Android builds)
 - CMake 3.22.1 or newer
 - JDK 11 or newer (use `/opt/android-studio/jbr` as specified in project rules)
 
-### Build Steps
+### Build Commands
 
-1. **Build libopenmpt module first**:
-   ```bash
-   ./gradlew :libopenmpt:build
-   ```
+**Build libopenmpt first (Android):**
+```bash
+./gradlew :libopenmpt:exportPrebuiltLibsDebug
+```
 
-2. **Build the app**:
-   ```bash
-   ./gradlew :app:assembleDebug
-   ```
+**Build Android app:**
+```bash
+./gradlew :app:assembleDebug
+```
 
-3. **Run on device/emulator**:
-   ```bash
-   ./gradlew :app:installDebug
-   ```
+**Run Desktop app:**
+```bash
+./gradlew :app:run
+```
 
-## Implementation Details
+**Build WASM/JS:**
+```bash
+./gradlew :app:wasmJsBrowserDevelopmentRun
+```
 
-### Key Design Decisions
+**Install Android app:**
+```bash
+./gradlew :app:installDebug
+```
 
-1. **Platform-Agnostic Interface**
-   - `ModPlayer` interface uses only Kotlin stdlib types
-   - No Android-specific dependencies in the interface
-   - Ready for KMP migration to iOS and JVM platforms
+## Key Technologies
 
-2. **Reactive State Management**
-   - `StateFlow` for playback state and position updates
-   - Automatic UI updates via Compose's `collectAsState()`
-   - Clean separation between business logic and UI
+### Dependency Injection with Koin
 
-3. **Native Audio Pipeline**
-   - Oboe for low-latency, high-performance audio
-   - Float samples (48kHz stereo) for best quality
-   - Thread-safe rendering in Oboe callback
-   - Automatic stream management and error recovery
+The project uses [Koin 4.1.1](https://insert-koin.io/) for multiplatform dependency injection:
 
-4. **Memory Safety**
-   - Proper lifecycle management with `release()` methods
-   - RAII patterns in C++ (smart pointers, destructors)
-   - JNI local references properly managed
+```kotlin
+// AppModule.kt
+val appModule = module {
+    factory<ModPlayer> { createModPlayer() }
+    viewModel { ModPlayerViewModel(get()) }
+}
 
-### Supported Module Formats
+// Usage in Composables
+@Composable
+fun ModPlayerScreen(
+    viewModel: ModPlayerViewModel = koinViewModel()
+) { ... }
+```
+
+### Multiplatform Logging
+
+Uses [de.halfbit:logger](https://github.com/nickel79/logger) (0.9) for cross-platform logging:
+
+```kotlin
+import de.halfbit.logger.d
+import de.halfbit.logger.e
+
+d("TAG") { "Debug message" }
+e("TAG") { "Error: ${exception.message}" }
+```
+
+### Compose Multiplatform Resources
+
+Sample MOD files are loaded using Compose Multiplatform resources:
+
+```kotlin
+val bytes = Res.readBytes("files/sm64_mainmenuss.xm")
+viewModel.loadModule(bytes)
+```
+
+## Supported Module Formats
 
 libopenmpt supports a wide range of tracker formats:
 - MOD (ProTracker, NoiseTracker, etc.)
@@ -125,54 +191,37 @@ libopenmpt supports a wide range of tracker formats:
 - S3M (Scream Tracker 3)
 - And many more...
 
-## Future Enhancements
+## Implementation Status
 
-### Ready for Kotlin Multiplatform
+### Android ✅
+- Full native implementation with JNI
+- Oboe for low-latency audio
+- Complete playback control
 
-The abstraction layer is designed for easy KMP migration:
+### Desktop (JVM) 🚧
+- Stub implementation
+- Needs JNI/JNA binding to libopenmpt
+- Needs audio backend (JavaSound or similar)
 
-1. **Move to KMP module**:
-   - Move interfaces to `commonMain`
-   - Keep `AndroidModPlayer` in `androidMain`
+### iOS 🚧
+- Stub implementation
+- Needs Kotlin/Native interop with libopenmpt
+- Needs CoreAudio integration
 
-2. **Add iOS support**:
-   - Create `IosModPlayer` in `iosMain`
-   - Use Kotlin/Native interop with libopenmpt
-   - Use AVAudioEngine for iOS audio output
-
-3. **Add JVM support**:
-   - Create `JvmModPlayer` in `jvmMain`
-   - Use JNI or JNA for libopenmpt access
-   - Use JavaSound or similar for desktop audio
-
-### Potential Features
-
-- File picker for loading custom MOD files
-- Playlist support
-- Pattern visualization
-- Equalizer controls
-- Export to WAV/MP3
-- Android MediaSession integration
-- Background playback service
-- Notification controls
-
-## Testing
-
-The sample MOD file (Super Mario 64 Main Menu theme) is automatically loaded from assets. To test:
-
-1. Launch the app
-2. Tap "Load Sample MOD File"
-3. View the metadata display
-4. Use play/pause/stop controls
-5. Drag the seek bar to navigate
+### Web (WASM/JS) 🚧
+- Stub implementation
+- Needs libopenmpt compiled to WASM
+- Needs Web Audio API integration
 
 ## Dependencies
 
-- **libopenmpt**: MOD music rendering engine
-- **Oboe 1.8.0**: Low-latency audio for Android
-- **Jetpack Compose**: Modern UI toolkit
-- **Kotlin Coroutines**: Async programming
-- **AndroidX Lifecycle**: ViewModel and lifecycle management
+- **Kotlin Multiplatform**: 2.2.21
+- **Compose Multiplatform**: 1.9.3
+- **Koin**: 4.1.1
+- **Logger**: 0.9 (de.halfbit:logger)
+- **libopenmpt**: Native MOD rendering
+- **Oboe**: 1.8.0 (Android low-latency audio)
+- **Kotlinx Coroutines**: 1.10.2
 
 ## License
 
@@ -181,20 +230,14 @@ This project uses:
 - Oboe (Apache 2.0)
 - Sample MOD file from [The Mod Archive](https://modarchive.org/)
 
-## Credits
-
-- **libopenmpt**: OpenMPT development team
-- **Oboe**: Google Android Audio team
-- **Sample Module**: Super Mario 64 Main Menu by [Module Author]
-
 ## Contributing
 
-When extending this project to Kotlin Multiplatform:
+When extending platform support:
 
-1. Keep the `ModPlayer` interface unchanged
-2. Add platform-specific implementations in appropriate source sets
-3. Maintain the reactive Flow-based state management
-4. Follow the existing error handling patterns
+1. Implement the `ModPlayer` interface in the platform-specific source set
+2. Implement the `actual fun createModPlayer()` factory function
+3. Use the appropriate audio backend for the platform
+4. Test with the sample MOD file
 
 ## Troubleshooting
 
@@ -202,17 +245,17 @@ When extending this project to Kotlin Multiplatform:
 
 - **CMake not found**: Install CMake from Android SDK Manager
 - **NDK errors**: Ensure NDK is properly installed and configured
-- **Oboe linking errors**: Check that prefab is enabled in build.gradle.kts
+- **Koin not found**: Check that Koin dependencies are in the version catalog
 
 ### Runtime Issues
 
-- **Native library loading fails**: Check that both `libopenmpt.so` and `libmodplayer.so` are in the APK
-- **No audio output**: Verify device audio settings and permissions
+- **Native library loading fails**: Ensure libopenmpt.so is built and exported
+- **No audio output**: Check device audio settings
 - **Crashes on play**: Check logcat for native crash details
 
 ## Documentation
 
-For more information about the underlying libraries:
 - [libopenmpt Documentation](https://lib.openmpt.org/libopenmpt/)
+- [Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/)
+- [Koin Documentation](https://insert-koin.io/docs/quickstart/kmp/)
 - [Oboe Documentation](https://github.com/google/oboe)
-- [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html)
