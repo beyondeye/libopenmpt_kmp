@@ -17,8 +17,12 @@ fun main() {
     startKoin {
         modules(appModule)
     }
-    
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+
+    ComposeViewport(
+        configure = {
+            isA11YEnabled = false
+        }
+    ) {
         App()
     }
 }
