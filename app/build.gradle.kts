@@ -16,6 +16,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Restrict to ABIs supported by our native libraries (libopenmpt, libmodplayer)
+        // This prevents packaging x86/x86_64 from other dependencies that would cause ABI mismatch
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     buildTypes {
