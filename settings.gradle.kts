@@ -12,7 +12,8 @@ pluginManagement {
     }
 }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    // Note: repositoriesMode is NOT set here to allow Kotlin/JS and Kotlin/Wasm
+    // plugins to add their required repositories (Node.js, Yarn, etc.) dynamically
     repositories {
         google()
         mavenCentral()
