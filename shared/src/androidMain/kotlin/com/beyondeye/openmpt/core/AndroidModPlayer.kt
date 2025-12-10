@@ -1,6 +1,9 @@
 package com.beyondeye.openmpt.core
 
-import android.util.Log
+import de.halfbit.logger.e
+import de.halfbit.logger.d
+import de.halfbit.logger.w
+import de.halfbit.logger.i
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -10,6 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+//TODO remove this helper methods and replace in code direct calls to de.halfbit.logger.*
+fun d(tag: String, msg: String) = d(tag){msg}
+fun e(tag: String, msg: String) = e(tag){msg}
+fun e(tag: String, msg: String,err: Exception) = e(tag,err){msg}
+fun i(tag: String, msg: String) = i(tag){msg}
+fun w(tag: String, msg: String) = w(tag){msg}
 
 /**
  * Android implementation of the ModPlayer interface.
@@ -34,7 +44,7 @@ class AndroidModPlayer : ModPlayer {
     // ========== Lifecycle ==========
     
     override fun loadModule(data: ByteArray): Boolean {
-        Log.d(TAG, "Loading module from byte array (${data.size} bytes)")
+        d(TAG, "Loading module from byte array (${data.size} bytes)")
         _playbackStateFlow.value = PlaybackState.Loading
         
         return try {
@@ -42,20 +52,20 @@ class AndroidModPlayer : ModPlayer {
             if (success) {
                 val metadata = getMetadata()
                 _playbackStateFlow.value = PlaybackState.Loaded(metadata)
-                Log.i(TAG, "Module loaded: ${metadata.title}")
+                i(TAG, "Module loaded: ${metadata.title}")
             } else {
                 _playbackStateFlow.value = PlaybackState.Error("Failed to load module")
             }
             success
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading module", e)
+            e(TAG, "Error loading module", e)
             _playbackStateFlow.value = PlaybackState.Error("Error loading module: ${e.message}", e)
             false
         }
     }
     
     override fun loadModuleFromPath(path: String): Boolean {
-        Log.d(TAG, "Loading module from path: $path")
+        d(TAG, "Loading module from path: $path")
         _playbackStateFlow.value = PlaybackState.Loading
         
         return try {
@@ -63,20 +73,20 @@ class AndroidModPlayer : ModPlayer {
             if (success) {
                 val metadata = getMetadata()
                 _playbackStateFlow.value = PlaybackState.Loaded(metadata)
-                Log.i(TAG, "Module loaded: ${metadata.title}")
+                i(TAG, "Module loaded: ${metadata.title}")
             } else {
                 _playbackStateFlow.value = PlaybackState.Error("Failed to load module from path")
             }
             success
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading module from path", e)
+            e(TAG, "Error loading module from path", e)
             _playbackStateFlow.value = PlaybackState.Error("Error loading module: ${e.message}", e)
             false
         }
     }
     
     override fun release() {
-        Log.d(TAG, "Releasing player")
+        d(TAG, "Releasing player")
         stop()
         positionUpdateJob?.cancel()
         native.nativeUnloadModule(handle)
@@ -87,7 +97,7 @@ class AndroidModPlayer : ModPlayer {
     // ========== Playback Control ==========
     
     override fun play() {
-        Log.d(TAG, "Play requested")
+        d(TAG, "Play requested")
         if (playbackState !is PlaybackState.Loaded && 
             playbackState !is PlaybackState.Paused && 
             playbackState !is PlaybackState.Stopped) {
@@ -104,9 +114,9 @@ class AndroidModPlayer : ModPlayer {
     }
     
     override fun pause() {
-        Log.d(TAG, "Pause requested")
+        d(TAG, "Pause requested")
         if (playbackState !is PlaybackState.Playing) {
-            Log.w(TAG, "Cannot pause: not currently playing")
+            w(TAG, "Cannot pause: not currently playing")
             return
         }
         
@@ -116,7 +126,7 @@ class AndroidModPlayer : ModPlayer {
     }
     
     override fun stop() {
-        Log.d(TAG, "Stop requested")
+        d(TAG, "Stop requested")
         native.nativeStop(handle)
         _playbackStateFlow.value = PlaybackState.Stopped
         _positionFlow.value = 0.0
@@ -124,7 +134,7 @@ class AndroidModPlayer : ModPlayer {
     }
     
     override fun seek(positionSeconds: Double) {
-        Log.d(TAG, "Seek to $positionSeconds seconds")
+        d(TAG, "Seek to $positionSeconds seconds")
         native.nativeSeek(handle, positionSeconds)
         _positionFlow.value = positionSeconds
     }
@@ -132,22 +142,22 @@ class AndroidModPlayer : ModPlayer {
     // ========== Configuration ==========
     
     override fun setRepeatCount(count: Int) {
-        Log.d(TAG, "Setting repeat count to $count")
+        d(TAG, "Setting repeat count to $count")
         native.nativeSetRepeatCount(handle, count)
     }
     
     override fun setMasterGain(gainMillibel: Int) {
-        Log.d(TAG, "Setting master gain to $gainMillibel mB")
+        d(TAG, "Setting master gain to $gainMillibel mB")
         native.nativeSetMasterGain(handle, gainMillibel)
     }
     
     override fun setStereoSeparation(percent: Int) {
-        Log.d(TAG, "Setting stereo separation to $percent%")
+        d(TAG, "Setting stereo separation to $percent%")
         native.nativeSetStereoSeparation(handle, percent)
     }
     
     override fun setPlaybackSpeed(speed: Double) {
-        Log.d(TAG, "Setting playback speed to $speed")
+        d(TAG, "Setting playback speed to $speed")
         native.nativeSetTempoFactor(handle, speed)
     }
     
@@ -156,7 +166,7 @@ class AndroidModPlayer : ModPlayer {
     }
     
     override fun setPitch(pitch: Double) {
-        Log.d(TAG, "Setting pitch to $pitch")
+        d(TAG, "Setting pitch to $pitch")
         native.nativeSetPitchFactor(handle, pitch)
     }
     
