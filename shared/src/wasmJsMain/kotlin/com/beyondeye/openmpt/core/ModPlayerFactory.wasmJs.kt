@@ -1,7 +1,6 @@
 package com.beyondeye.openmpt.core
 
 /**
- * Wasm/JS implementation of the ModPlayer factory.
- * Creates a WasmModPlayer instance.
+ * WasmJS implementation of the ModPlayer factory function.
  */
 actual fun createModPlayer(): ModPlayer = WasmModPlayer()

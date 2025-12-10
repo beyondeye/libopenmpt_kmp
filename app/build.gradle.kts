@@ -37,6 +37,7 @@ kotlin {
                 outputFileName = "openmptdemo.js"
             }
         }
+        // We want an executable wasm "app"
         binaries.executable()
     }
     
