@@ -59,14 +59,18 @@ class ModPlayerViewModel(
     // ========== File Loading ==========
     
     /**
-     * Load a MOD file from a byte array
+     * Load a MOD file from a byte array.
+     * Uses the suspend version of loadModule which handles async initialization
+     * properly on platforms that require it (like wasmJS).
      */
-    fun loadModule(data: ByteArray) {
+    fun loadModuleAsync(data: ByteArray) {
         viewModelScope.launch {
             _isLoading.value = true
             
             try {
-                val success = player.loadModule(data)
+                // Use loadModuleSuspend for proper async initialization support
+                // (especially important for wasmJS where libopenmpt needs to be loaded dynamically)
+                val success = player.loadModuleSuspend(data)
                 
                 if (success) {
                     _metadata.value = player.getMetadata()

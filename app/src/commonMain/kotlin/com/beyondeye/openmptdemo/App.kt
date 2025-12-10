@@ -32,6 +32,7 @@ import com.beyondeye.openmptdemo.uicomponents.CollapsibleSection
 import com.beyondeye.openmptdemo.uicomponents.MetadataDisplay
 import com.beyondeye.openmptdemo.uicomponents.PlaybackControls
 import com.beyondeye.openmptdemo.uicomponents.SpeedPitchControls
+import de.halfbit.logger.e
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.koin.compose.viewmodel.koinViewModel
@@ -88,9 +89,9 @@ fun ModPlayerScreen(
                     scope.launch {
                         try {
                             val bytes = Res.readBytes("files/sm64_mainmenuss.xm")
-                            viewModel.loadModule(bytes)
+                            viewModel.loadModuleAsync(bytes)
                         } catch (e: Exception) {
-                            // Handle error - resource not found
+                            e("modplayer",){"error loading sample mod file:"}
                         }
                     }
                 },

@@ -1,7 +1,6 @@
 package com.beyondeye.openmptdemo
 
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.window.CanvasBasedWindow
 import androidx.compose.ui.window.ComposeViewport
 import com.beyondeye.openmptdemo.di.appModule
 import de.halfbit.logger.initializeLogger

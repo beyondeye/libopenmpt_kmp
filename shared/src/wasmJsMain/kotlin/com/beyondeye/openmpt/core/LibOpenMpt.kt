@@ -2,6 +2,8 @@
 
 package com.beyondeye.openmpt.core
 
+import kotlinx.coroutines.delay
+
 /**
  * External declarations for libopenmpt WASM module compiled with Emscripten.
  * These declarations map to the C API exposed by libopenmpt.js.
@@ -151,6 +153,55 @@ private fun jsCheckLibOpenMptReady(): Boolean =
     js("typeof libopenmpt !== 'undefined' && libopenmpt.HEAPU8 !== undefined")
 
 /**
+ * Load the libopenmpt.js script dynamically and set up initialization callback.
+ * This creates a global libopenmpt object with onRuntimeInitialized callback
+ * before loading the script.
+ */
+private fun jsLoadLibOpenMptScript(): Unit = js("""
+    (function() {
+        // Already loading or loaded
+        if (window.libopenmptScriptLoading || window.libopenmptReady) {
+            return;
+        }
+        
+        // Check if already initialized (e.g., loaded via script tag in HTML)
+        if (typeof libopenmpt !== 'undefined' && libopenmpt.HEAPU8 !== undefined) {
+            window.libopenmptReady = true;
+            return;
+        }
+        
+        window.libopenmptScriptLoading = true;
+        console.log('Loading libopenmpt.js dynamically...');
+        
+        // Create the Module object with onRuntimeInitialized callback
+        // This must be done BEFORE loading the script
+        window.libopenmpt = {
+            onRuntimeInitialized: function() {
+                console.log('libopenmpt WASM module initialized successfully');
+                window.libopenmptReady = true;
+                window.libopenmptScriptLoading = false;
+            }
+        };
+        
+        // Create and load the script
+        var script = document.createElement('script');
+        script.src = 'libopenmpt.js';
+        script.onerror = function() { 
+            console.error('Failed to load libopenmpt.js');
+            window.libopenmptScriptLoading = false;
+            window.libopenmptLoadError = true;
+        };
+        document.head.appendChild(script);
+    })()
+""")
+
+/**
+ * Check if libopenmpt script loading has failed.
+ */
+private fun jsCheckLibOpenMptLoadError(): Boolean =
+    js("window.libopenmptLoadError === true")
+
+/**
  * Render parameter constants
  */
 object RenderParam {
@@ -165,6 +216,10 @@ object RenderParam {
  */
 object LibOpenMpt {
     
+    // Track if initialization has been attempted
+    private var initializationAttempted = false
+    private var initializationSucceeded = false
+    
     /**
      * Check if libopenmpt module is ready to use.
      */
@@ -174,6 +229,70 @@ object LibOpenMpt {
         } catch (e: Throwable) {
             false
         }
+    }
+    
+    /**
+     * Initialize the libopenmpt library by dynamically loading the script and waiting
+     * for the WASM module to be ready.
+     * 
+     * This function should be called once before using any libopenmpt functions.
+     * It will:
+     * 1. Check if the library is already initialized
+     * 2. If not, dynamically load libopenmpt.js
+     * 3. Wait for the WASM module to be fully initialized
+     * 
+     * @param timeoutMs Maximum time to wait for initialization (default 30 seconds)
+     * @return true if initialization succeeded, false if it failed or timed out
+     */
+    suspend fun initializeLibOpenMpt(timeoutMs: Long = 30000): Boolean {
+        // If already successfully initialized, return immediately
+        if (initializationSucceeded && isReady()) {
+            return true
+        }
+        
+        // If already initialized via other means (e.g., script tag in HTML), mark as success
+        if (isReady()) {
+            initializationAttempted = true
+            initializationSucceeded = true
+            return true
+        }
+        
+        // If initialization already failed, don't retry
+        if (initializationAttempted && !initializationSucceeded) {
+            // Check if there was a load error
+            if (jsCheckLibOpenMptLoadError()) {
+                return false
+            }
+        }
+        
+        // Start loading the script
+        initializationAttempted = true
+        jsLoadLibOpenMptScript()
+        
+        // Poll for readiness with timeout
+        val pollIntervalMs = 100L
+        var elapsedMs = 0L
+        
+        while (elapsedMs < timeoutMs) {
+            // Check if initialization completed
+            if (isReady()) {
+                initializationSucceeded = true
+                return true
+            }
+            
+            // Check if loading failed
+            if (jsCheckLibOpenMptLoadError()) {
+                initializationSucceeded = false
+                return false
+            }
+            
+            delay(pollIntervalMs)
+            elapsedMs += pollIntervalMs
+        }
+        
+        // Timeout reached
+        initializationSucceeded = false
+        return false
     }
     
     /**

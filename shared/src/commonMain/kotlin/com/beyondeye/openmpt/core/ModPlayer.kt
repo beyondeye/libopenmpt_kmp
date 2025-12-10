@@ -27,6 +27,19 @@ interface ModPlayer {
     fun loadModule(data: ByteArray): Boolean
     
     /**
+     * Suspend version of loadModule that can perform async initialization if needed.
+     * This is the recommended way to load modules on platforms that require async setup
+     * (like wasmJS where libopenmpt needs to be dynamically loaded).
+     * 
+     * Default implementation just calls loadModule synchronously.
+     * 
+     * @param data The complete module file data
+     * @return true if loaded successfully, false otherwise
+     * @throws ModPlayerException.LoadFailed if loading fails
+     */
+    suspend fun loadModuleSuspend(data: ByteArray): Boolean = loadModule(data)
+    
+    /**
      * Load a module from a file path.
      * @param path Absolute path to the module file
      * @return true if loaded successfully, false otherwise

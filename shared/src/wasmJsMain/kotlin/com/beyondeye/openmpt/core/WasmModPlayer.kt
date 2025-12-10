@@ -48,6 +48,40 @@ class WasmModPlayer : ModPlayer {
     
     // ========== Lifecycle ==========
     
+    /**
+     * Suspend version of loadModule that handles libopenmpt initialization automatically.
+     * This is the recommended way to load modules in wasmJS as it ensures the library
+     * is properly initialized before attempting to load.
+     * 
+     * @param data The module file data as a ByteArray
+     * @return true if the module was loaded successfully, false otherwise
+     */
+    override suspend fun loadModuleSuspend(data: ByteArray): Boolean {
+        d(LOGTAG) { "Loading module from byte array (${data.size} bytes) with initialization" }
+        _playbackStateFlow.value = PlaybackState.Loading
+        
+        return try {
+            // Initialize libopenmpt if not already initialized
+            if (!LibOpenMpt.isReady()) {
+                d(LOGTAG) { "libopenmpt not ready, initializing..." }
+                val initialized = LibOpenMpt.initializeLibOpenMpt()
+                if (!initialized) {
+                    e(LOGTAG) { "Failed to initialize libopenmpt" }
+                    _playbackStateFlow.value = PlaybackState.Error("Failed to initialize libopenmpt")
+                    return false
+                }
+                d(LOGTAG) { "libopenmpt initialized successfully" }
+            }
+            
+            // Now proceed with loading the module
+            loadModuleInternal(data)
+        } catch (e: Throwable) {
+            e(LOGTAG) { "Error loading module: ${e.message}" }
+            _playbackStateFlow.value = PlaybackState.Error("Error loading module: ${e.message}", e)
+            false
+        }
+    }
+    
     override fun loadModule(data: ByteArray): Boolean {
         d(LOGTAG) { "Loading module from byte array (${data.size} bytes)" }
         _playbackStateFlow.value = PlaybackState.Loading
@@ -55,35 +89,42 @@ class WasmModPlayer : ModPlayer {
         return try {
             // Check if libopenmpt is ready
             if (!LibOpenMpt.isReady()) {
-                e(LOGTAG){"libopenmpt is not ready"}
-                _playbackStateFlow.value = PlaybackState.Error("libopenmpt is not ready")
+                e(LOGTAG){"libopenmpt is not ready. Call loadModuleSuspend() instead for automatic initialization."}
+                _playbackStateFlow.value = PlaybackState.Error("libopenmpt is not ready. Use loadModuleSuspend() for automatic initialization.")
                 return false
             }
             
-            // Unload any existing module
-            if (moduleHandle != 0) {
-                LibOpenMpt.destroyModule(moduleHandle)
-                moduleHandle = 0
-            }
-            
-            // Create new module
-            moduleHandle = LibOpenMpt.createModule(data)
-            
-            if (moduleHandle == 0) {
-                e(LOGTAG){"Failed to load module"}
-                _playbackStateFlow.value = PlaybackState.Error("Failed to load module")
-                return false
-            }
-            
-            val metadata = getMetadata()
-            _playbackStateFlow.value = PlaybackState.Loaded(metadata)
-            d(LOGTAG){"Module loaded: ${metadata.title}"}
-            true
+            loadModuleInternal(data)
         } catch (e: Throwable) {
             e(LOGTAG){"Error loading module: ${e.message}"}
             _playbackStateFlow.value = PlaybackState.Error("Error loading module: ${e.message}", e)
             false
         }
+    }
+    
+    /**
+     * Internal module loading logic shared by loadModule and loadModuleSuspend.
+     */
+    private fun loadModuleInternal(data: ByteArray): Boolean {
+        // Unload any existing module
+        if (moduleHandle != 0) {
+            LibOpenMpt.destroyModule(moduleHandle)
+            moduleHandle = 0
+        }
+        
+        // Create new module
+        moduleHandle = LibOpenMpt.createModule(data)
+        
+        if (moduleHandle == 0) {
+            e(LOGTAG){"Failed to load module"}
+            _playbackStateFlow.value = PlaybackState.Error("Failed to load module")
+            return false
+        }
+        
+        val metadata = getMetadata()
+        _playbackStateFlow.value = PlaybackState.Loaded(metadata)
+        d(LOGTAG){"Module loaded: ${metadata.title}"}
+        return true
     }
     
     override fun loadModuleFromPath(path: String): Boolean {
