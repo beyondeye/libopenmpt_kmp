@@ -23,3 +23,19 @@ fun initKoin() {
         modules(appModule)
     }
 }
+
+//TODO remember to add here logger init when iOS platform will be implemented
+// see https://github.com/sergejsha/logger?tab=readme-ov-file#ios-usage
+/*
+init() {
+    LogKt.initializeLogger { builder in
+        builder.registerIosLogSink(logPrinter: LogPrinterCompanion.shared.Default)
+    }
+}
+
+private let TAG = "SampleApp"
+LogKt.d(tag: TAG) {
+    "debug message"
+}
+
+ */

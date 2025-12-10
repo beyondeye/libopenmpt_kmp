@@ -3,6 +3,8 @@ package com.beyondeye.openmptdemo
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.beyondeye.openmptdemo.di.appModule
+import de.halfbit.logger.initializeLogger
+import de.halfbit.logger.sink.println.registerPrintlnSink
 import org.koin.core.context.startKoin
 
 /**
@@ -11,6 +13,9 @@ import org.koin.core.context.startKoin
  * Initializes Koin and launches the application window.
  */
 fun main() = application {
+    initializeLogger {
+        registerPrintlnSink()
+    }
     // Initialize Koin before launching the app
     startKoin {
         modules(appModule)
