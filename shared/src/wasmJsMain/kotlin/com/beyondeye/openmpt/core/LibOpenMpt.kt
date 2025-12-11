@@ -2,6 +2,7 @@
 
 package com.beyondeye.openmpt.core
 
+import de.halfbit.logger.e
 import kotlinx.coroutines.delay
 
 /**
@@ -150,7 +151,7 @@ private fun jsLibOpenMptModuleGetCurrentRow(mod: Int): Int =
     js("libopenmpt._openmpt_module_get_current_row(mod)")
 
 private fun jsCheckLibOpenMptReady(): Boolean =
-    js("typeof libopenmpt !== 'undefined' && libopenmpt.HEAPU8 !== undefined")
+    js("typeof libopenmpt !== 'undefined' && typeof libopenmpt._malloc === 'function'") //&& libopenmpt.HEAPU8 !== undefined
 
 /**
  * Load the libopenmpt.js script dynamically and set up initialization callback.
@@ -165,7 +166,7 @@ private fun jsLoadLibOpenMptScript(): Unit = js("""
         }
         
         // Check if already initialized (e.g., loaded via script tag in HTML)
-        if (typeof libopenmpt !== 'undefined' && libopenmpt.HEAPU8 !== undefined) {
+        if (typeof libopenmpt !== 'undefined' && typeof libopenmpt._malloc === 'function') { //&& libopenmpt.HEAPU8 !== undefined
             window.libopenmptReady = true;
             return;
         }
@@ -308,15 +309,20 @@ object LibOpenMpt {
     /**
      * Copy a ByteArray to the WASM heap.
      * @return Pointer to the allocated memory (must be freed with free())
+     * TODO this method is very inefficient:
      */
     fun copyToHeap(data: ByteArray): Int {
+        // println("[LibOpenMpt] copyToHeap: before malloc")
         val ptr = malloc(data.size)
+        // println("[LibOpenMpt] copyToHeap: after malloc: result $ptr")
         if (ptr == 0) return 0
-        
+
+        // println("[LibOpenMpt] copyToHeap: before jsLibOpenMptHeapU8")
         val heap = jsLibOpenMptHeapU8()
         for (i in data.indices) {
             jsUint8ArraySet(heap, ptr + i, data[i].toInt() and 0xFF)
         }
+        // println("[LibOpenMpt] copyToHeap: copy complete, returning ptr = $ptr")
         return ptr
     }
     
@@ -344,10 +350,17 @@ object LibOpenMpt {
      * @return Module handle, or 0 on failure
      */
     fun createModule(data: ByteArray): Int {
+        //println("[LibOpenMpt] createModule: starting, data size = ${data.size}")
+        
         val dataPtr = copyToHeap(data)
-        if (dataPtr == 0) return 0
+        //println("[LibOpenMpt] createModule: copyToHeap returned dataPtr = $dataPtr")
+        if (dataPtr == 0) {
+            e("LibOpenMpt"){"createModule: copyToHeap failed, returning 0"}
+            return 0
+        }
         
         try {
+            //println("[LibOpenMpt] createModule: calling _openmpt_module_create_from_memory2")
             val mod = jsLibOpenMptModuleCreateFromMemory2(
                 data = dataPtr,
                 size = data.size,
@@ -359,8 +372,10 @@ object LibOpenMpt {
                 errorMessage = 0,
                 ctls = 0
             )
+            //println("[LibOpenMpt] createModule: _openmpt_module_create_from_memory2 returned mod = $mod")
             return mod
         } finally {
+            //println("[LibOpenMpt] createModule: freeing dataPtr")
             free(dataPtr)
         }
     }
