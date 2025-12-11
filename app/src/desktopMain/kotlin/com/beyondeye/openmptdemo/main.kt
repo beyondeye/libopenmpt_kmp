@@ -23,7 +23,7 @@ fun main() = application {
     
     Window(
         onCloseRequest = ::exitApplication,
-        title = "OpenMPT Demo Player"
+        title = "LibOpenMPT Demo Player"
     ) {
         App()
     }

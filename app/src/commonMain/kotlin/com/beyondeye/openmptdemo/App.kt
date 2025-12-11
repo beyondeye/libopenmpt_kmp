@@ -38,7 +38,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Main application composable for the OpenMPT Demo player.
+ * Main application composable for the libOpenMPT Demo player.
  * This is the entry point for the Compose Multiplatform UI.
  */
 @Composable
@@ -74,7 +74,7 @@ fun ModPlayerScreen(
     ) {
         // Title
         Text(
-            text = "OpenMPT Demo Player",
+            text = "LibOpenMPT Demo Player",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(top = 16.dp)
         )
