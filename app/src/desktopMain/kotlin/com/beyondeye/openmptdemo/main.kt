@@ -5,6 +5,7 @@ import androidx.compose.ui.window.application
 import com.beyondeye.openmptdemo.di.appModule
 import de.halfbit.logger.initializeLogger
 import de.halfbit.logger.sink.println.registerPrintlnSink
+import io.github.vinceglb.filekit.FileKit
 import org.koin.core.context.startKoin
 
 /**
@@ -16,6 +17,10 @@ fun main() = application {
     initializeLogger {
         registerPrintlnSink()
     }
+    
+    // Initialize FileKit for desktop platform
+    FileKit.init(appId = "com.beyondeye.openmptdemo")
+    
     // Initialize Koin before launching the app
     startKoin {
         modules(appModule)

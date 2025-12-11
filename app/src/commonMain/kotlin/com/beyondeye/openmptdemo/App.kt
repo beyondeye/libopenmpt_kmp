@@ -2,18 +2,11 @@ package com.beyondeye.openmptdemo
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,6 +23,7 @@ import com.beyondeye.openmptdemo.resources.Res
 import com.beyondeye.openmptdemo.ui.theme.OpenMPTDemoTheme
 import com.beyondeye.openmptdemo.uicomponents.CollapsibleSection
 import com.beyondeye.openmptdemo.uicomponents.MetadataDisplay
+import com.beyondeye.openmptdemo.uicomponents.ModuleFileLoader
 import com.beyondeye.openmptdemo.uicomponents.PlaybackControls
 import com.beyondeye.openmptdemo.uicomponents.SpeedPitchControls
 import de.halfbit.logger.e
@@ -84,24 +78,22 @@ fun ModPlayerScreen(
             title = "Load Module Files",
             initiallyExpanded = true
         ) {
-            Button(
-                onClick = {
+            ModuleFileLoader(
+                onLoadSampleFile = {
                     scope.launch {
                         try {
                             val bytes = Res.readBytes("files/sm64_mainmenuss.xm")
                             viewModel.loadModuleAsync(bytes)
                         } catch (e: Exception) {
-                            e("modplayer",){"error loading sample mod file:"}
+                            e("modplayer") { "error loading sample mod file:" }
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading
-            ) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Load Sample MOD File")
-            }
+                onLoadFileBytes = { bytes ->
+                    viewModel.loadModuleAsync(bytes)
+                },
+                isLoading = isLoading
+            )
         }
         
         // Track Information Section
@@ -123,6 +115,7 @@ fun ModPlayerScreen(
         
         // Position and seek bar
         PlaybackControls(
+            metadata?.title,
             playbackState = playbackState,
             position = position,
             duration = viewModel.getDuration(),
@@ -148,4 +141,3 @@ fun ModPlayerScreen(
         }
     }
 }
-

@@ -64,6 +64,9 @@ kotlin {
                 
                 // Logging
                 implementation(libs.logger)
+                
+                // File picker
+                implementation(libs.filekit.dialogs.compose)
             }
         }
         

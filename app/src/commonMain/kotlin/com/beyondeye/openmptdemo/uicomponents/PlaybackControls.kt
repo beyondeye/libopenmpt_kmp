@@ -26,6 +26,7 @@ import com.beyondeye.openmptdemo.timeutils.formatTime
 
 @Composable
 fun PlaybackControls(
+    trackTitle: String?,
     playbackState: PlaybackState,
     position: Double,
     duration: Double,
@@ -37,6 +38,11 @@ fun PlaybackControls(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+            trackTitle?.let {
+                Text("> " + trackTitle + " <")
+            }
+        }
         // Position display
         Row(
             modifier = Modifier.fillMaxWidth(),

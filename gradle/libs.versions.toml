@@ -22,6 +22,9 @@ koin = "4.1.1"
 # Logging
 logger = "0.9"
 
+# File picker
+filekit = "0.12.0"
+
 [libraries]
 androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core", version.ref = "materialIconsCore" }
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsCore" }
@@ -56,6 +59,9 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", ver
 
 # Logging
 logger = { module = "de.halfbit:logger", version.ref = "logger" }
+
+# File picker
+filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
