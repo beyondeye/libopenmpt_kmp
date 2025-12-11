@@ -184,7 +184,7 @@ viewModel.loadModule(bytes)
 
 ## Supported Module Formats
 
-libopenmpt supports a wide range of tracker formats:
+libopenmpt 0.8.3 supports a wide range of tracker formats:
 - MOD (ProTracker, NoiseTracker, etc.)
 - XM (FastTracker 2)
 - IT (Impulse Tracker)
@@ -222,7 +222,7 @@ libopenmpt supports a wide range of tracker formats:
 - **Compose Multiplatform**: 1.9.3
 - **Koin**: 4.1.1
 - **Logger**: 0.9 (de.halfbit:logger)
-- **libopenmpt**: Native MOD rendering
+- **libopenmpt**: 0.8.3  (Native MOD rendering)
 - **Oboe**: 1.8.0 (Android low-latency audio)
 - **Kotlinx Coroutines**: 1.10.2
 
