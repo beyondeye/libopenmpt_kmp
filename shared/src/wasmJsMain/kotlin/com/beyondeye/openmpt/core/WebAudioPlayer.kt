@@ -41,10 +41,9 @@ external class JsAudioParam : JsAny {
     var value: Float
 }
 
-external class JsAudioProcessingEvent : JsAny {
-    val outputBuffer: JsAudioBuffer
-    val playbackTime: Double
-}
+// Note: JsAudioProcessingEvent is NOT declared as external class because Kotlin/Wasm
+// generates instanceof checks that fail at runtime. Instead, we use JsAny and
+// access properties via js() helper functions.
 
 external class JsAudioBuffer : JsAny {
     val numberOfChannels: Int
@@ -57,8 +56,11 @@ external class JsAudioBuffer : JsAny {
 private fun jsCreateAudioContext(): JsAudioContext =
     js("new AudioContext()")
 
-private fun jsSetOnaudioprocess(node: JsScriptProcessorNode, callback: (JsAudioProcessingEvent) -> Unit): Unit =
+private fun jsSetOnaudioprocess(node: JsScriptProcessorNode, callback: (JsAny) -> Unit): Unit =
     js("node.onaudioprocess = callback")
+
+private fun jsGetOutputBuffer(event: JsAny): JsAudioBuffer =
+    js("event.outputBuffer")
 
 private fun jsClearOnaudioprocess(node: JsScriptProcessorNode): Unit =
     js("node.onaudioprocess = null")
@@ -242,8 +244,8 @@ class WebAudioPlayer(
     /**
      * Process audio callback from ScriptProcessorNode.
      */
-    private fun processAudio(event: JsAudioProcessingEvent) {
-        val outputBuffer = event.outputBuffer
+    private fun processAudio(event: JsAny) {
+        val outputBuffer = jsGetOutputBuffer(event)
         val leftChannel = outputBuffer.getChannelData(0)
         val rightChannel = outputBuffer.getChannelData(1)
         val frameCount = outputBuffer.length
