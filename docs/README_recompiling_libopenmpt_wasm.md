@@ -1,4 +1,4 @@
-## Building libopenmpt with Emscripten
+## Building libopenmpt with Emscripten (wasm target)
 
 ### Step 1: Install Emscripten SDK
 
