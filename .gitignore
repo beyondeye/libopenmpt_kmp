@@ -13,4 +13,4 @@ local.properties
 /.idea/
 /shared/build/
 /.kotlin/
-/kotlin-js-store/wasm/yarn.lock
+/shared/src/desktopMain/cpp/build/
