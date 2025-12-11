@@ -1,4 +1,4 @@
-# OpenMPT Demo - Multiplatform MOD Music Player
+# LibOpenMPT Demo Player- Multiplatform MOD Music Player
 
 A **Compose Multiplatform** application demonstrating native MOD music playback using libopenmpt. Built with Kotlin Multiplatform (KMP), supporting Android, iOS, Desktop (JVM), and Web (WASM/JS).
 
@@ -14,12 +14,12 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 
 ## Supported Platforms
 
-| Platform | Status | Audio Backend |
-|----------|--------|---------------|
-| Android | ✅ Ready | Oboe + libopenmpt |
-| Desktop (JVM) | 🚧 Stub | To be implemented |
-| iOS | 🚧 Stub | To be implemented |
-| Web (WASM/JS) | 🚧 Stub | To be implemented |
+| Platform | Status  | Audio Backend               |
+|----------|---------|-----------------------------|
+| Android | ✅ Ready | Oboe + libopenmpt           |
+| Desktop (JVM) | ✅ Ready | JavaSound audio +libopenmpt |
+| iOS | 🚧 Stub | To be implemented           |
+| Web (WASM/JS) | ✅ Ready | Web Audio API +libopenmpt     |
 
 ## Architecture
 
@@ -190,6 +190,7 @@ libopenmpt supports a wide range of tracker formats:
 - IT (Impulse Tracker)
 - S3M (Scream Tracker 3)
 - And many more...
+- see [libopenmpt FAQ](https://lib.openmpt.org/libopenmpt/faq/) for full list
 
 ## Implementation Status
 
