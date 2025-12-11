@@ -199,20 +199,22 @@ libopenmpt supports a wide range of tracker formats:
 - Oboe for low-latency audio
 - Complete playback control
 
-### Desktop (JVM) 🚧
-- Stub implementation
-- Needs JNI/JNA binding to libopenmpt
-- Needs audio backend (JavaSound or similar)
+### Desktop (JVM) ✅
+- Full native implementation with JNI bridge
+- libopenmpt for MOD rendering via JNI
+- JavaSound `SourceDataLine` for 16-bit PCM audio output
+- Complete playback control with state management
 
 ### iOS 🚧
 - Stub implementation
 - Needs Kotlin/Native interop with libopenmpt
 - Needs CoreAudio integration
 
-### Web (WASM/JS) 🚧
-- Stub implementation
-- Needs libopenmpt compiled to WASM
-- Needs Web Audio API integration
+### Web (WASM/JS) ✅
+- Full implementation with libopenmpt compiled to WASM
+- Web Audio API with ScriptProcessorNode for audio output
+- Complete playback control and metadata support
+- Note: ScriptProcessorNode is deprecated; future migration to AudioWorklet recommended
 
 ## Dependencies
 
