@@ -93,15 +93,28 @@ tasks.register("exportPrebuiltLibs") {
 // iOS Build Tasks using CMake
 // ============================================================================
 
+val iosCmakeDir = file("src/main/cpp/ios")
 val iosCppDir = file("src/main/cpp")
 val iosBuildDir = layout.buildDirectory.dir("ios").get().asFile
 val iosOutputDir = rootProject.file("shared/src/iosMain/libs")
 val iosHeadersDir = rootProject.file("shared/src/iosMain/headers/libopenmpt")
 
-// Task to build libopenmpt for iOS arm64 (physical devices)
-tasks.register<Exec>("buildIosArm64") {
-    description = "Build libopenmpt.a for iOS arm64 (device)"
+// Task to create iOS build directories
+tasks.register("createIosBuildDirs") {
+    description = "Create iOS build directories"
     group = "ios build"
+    
+    doLast {
+        File(iosBuildDir, "arm64-device").mkdirs()
+        File(iosBuildDir, "arm64-simulator").mkdirs()
+    }
+}
+
+// Task to configure CMake for iOS arm64 (physical devices)
+tasks.register<Exec>("configureIosArm64") {
+    description = "Configure CMake for iOS arm64 (device)"
+    group = "ios build"
+    dependsOn("createIosBuildDirs")
     
     val buildDir = File(iosBuildDir, "arm64-device")
     
@@ -109,7 +122,7 @@ tasks.register<Exec>("buildIosArm64") {
         buildDir.mkdirs()
     }
     
-    workingDir = buildDir
+    workingDir(buildDir)
     
     commandLine(
         "cmake",
@@ -119,22 +132,28 @@ tasks.register<Exec>("buildIosArm64") {
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
         "-DCMAKE_OSX_SYSROOT=iphoneos",
         "-DCMAKE_BUILD_TYPE=Release",
-        iosCppDir.absolutePath,
-        "-C", File(iosCppDir, "CMakeLists-ios.txt").absolutePath
+        iosCmakeDir.absolutePath
     )
-    
-    doLast {
-        exec {
-            workingDir = buildDir
-            commandLine("cmake", "--build", ".", "--config", "Release")
-        }
-    }
 }
 
-// Task to build libopenmpt for iOS arm64 simulator (M1/M2 Macs)
-tasks.register<Exec>("buildIosSimArm64") {
-    description = "Build libopenmpt.a for iOS arm64 simulator"
+// Task to build libopenmpt for iOS arm64 (physical devices)
+tasks.register<Exec>("buildIosArm64") {
+    description = "Build libopenmpt.a for iOS arm64 (device)"
     group = "ios build"
+    dependsOn("configureIosArm64")
+    
+    val buildDir = File(iosBuildDir, "arm64-device")
+    
+    workingDir(buildDir)
+    
+    commandLine("cmake", "--build", ".", "--config", "Release")
+}
+
+// Task to configure CMake for iOS arm64 simulator (M1/M2 Macs)
+tasks.register<Exec>("configureIosSimArm64") {
+    description = "Configure CMake for iOS arm64 simulator"
+    group = "ios build"
+    dependsOn("createIosBuildDirs")
     
     val buildDir = File(iosBuildDir, "arm64-simulator")
     
@@ -142,7 +161,7 @@ tasks.register<Exec>("buildIosSimArm64") {
         buildDir.mkdirs()
     }
     
-    workingDir = buildDir
+    workingDir(buildDir)
     
     commandLine(
         "cmake",
@@ -152,16 +171,21 @@ tasks.register<Exec>("buildIosSimArm64") {
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
         "-DCMAKE_OSX_SYSROOT=iphonesimulator",
         "-DCMAKE_BUILD_TYPE=Release",
-        iosCppDir.absolutePath,
-        "-C", File(iosCppDir, "CMakeLists-ios.txt").absolutePath
+        iosCmakeDir.absolutePath
     )
+}
+
+// Task to build libopenmpt for iOS arm64 simulator (M1/M2 Macs)
+tasks.register<Exec>("buildIosSimArm64") {
+    description = "Build libopenmpt.a for iOS arm64 simulator"
+    group = "ios build"
+    dependsOn("configureIosSimArm64")
     
-    doLast {
-        exec {
-            workingDir = buildDir
-            commandLine("cmake", "--build", ".", "--config", "Release")
-        }
-    }
+    val buildDir = File(iosBuildDir, "arm64-simulator")
+    
+    workingDir(buildDir)
+    
+    commandLine("cmake", "--build", ".", "--config", "Release")
 }
 
 // Task to create XCFramework from both architectures

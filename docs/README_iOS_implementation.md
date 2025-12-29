@@ -14,7 +14,7 @@ The iOS implementation consists of:
 
 ### Prerequisites
 - Xcode with iOS SDK
-- CMake 3.21+
+- CMake 3.21+ (brew install cmake)
 - macOS
 
 ### Gradle Tasks
