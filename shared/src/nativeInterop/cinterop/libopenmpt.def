@@ -1,0 +1,15 @@
+headers = libopenmpt/libopenmpt.h
+headerFilter = libopenmpt/**
+
+# Compiler options
+compilerOpts = -I${projectDir}/src/iosMain/headers
+
+# Linker options - will link against the static library from XCFramework
+linkerOpts.ios_arm64 = -L${projectDir}/src/iosMain/libs/libopenmpt.xcframework/ios-arm64 -lopenmpt
+linkerOpts.ios_simulator_arm64 = -L${projectDir}/src/iosMain/libs/libopenmpt.xcframework/ios-arm64_x86_64-simulator -lopenmpt
+
+# Package name for generated Kotlin bindings
+package = libopenmpt
+
+# Additional options
+noStringConversion = openmpt_module_get_metadata openmpt_module_get_metadata_keys

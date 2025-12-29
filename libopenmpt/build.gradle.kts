@@ -88,3 +88,141 @@ tasks.register("exportPrebuiltLibs") {
     description = "Export both Debug and Release libopenmpt.so files to shared/src/androidMain/jniLibs"
     dependsOn("exportPrebuiltLibsDebug", "exportPrebuiltLibsRelease")
 }
+
+// ============================================================================
+// iOS Build Tasks using CMake
+// ============================================================================
+
+val iosCppDir = file("src/main/cpp")
+val iosBuildDir = layout.buildDirectory.dir("ios").get().asFile
+val iosOutputDir = rootProject.file("shared/src/iosMain/libs")
+val iosHeadersDir = rootProject.file("shared/src/iosMain/headers/libopenmpt")
+
+// Task to build libopenmpt for iOS arm64 (physical devices)
+tasks.register<Exec>("buildIosArm64") {
+    description = "Build libopenmpt.a for iOS arm64 (device)"
+    group = "ios build"
+    
+    val buildDir = File(iosBuildDir, "arm64-device")
+    
+    doFirst {
+        buildDir.mkdirs()
+    }
+    
+    workingDir = buildDir
+    
+    commandLine(
+        "cmake",
+        "-G", "Xcode",
+        "-DCMAKE_SYSTEM_NAME=iOS",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
+        "-DCMAKE_OSX_SYSROOT=iphoneos",
+        "-DCMAKE_BUILD_TYPE=Release",
+        iosCppDir.absolutePath,
+        "-C", File(iosCppDir, "CMakeLists-ios.txt").absolutePath
+    )
+    
+    doLast {
+        exec {
+            workingDir = buildDir
+            commandLine("cmake", "--build", ".", "--config", "Release")
+        }
+    }
+}
+
+// Task to build libopenmpt for iOS arm64 simulator (M1/M2 Macs)
+tasks.register<Exec>("buildIosSimArm64") {
+    description = "Build libopenmpt.a for iOS arm64 simulator"
+    group = "ios build"
+    
+    val buildDir = File(iosBuildDir, "arm64-simulator")
+    
+    doFirst {
+        buildDir.mkdirs()
+    }
+    
+    workingDir = buildDir
+    
+    commandLine(
+        "cmake",
+        "-G", "Xcode",
+        "-DCMAKE_SYSTEM_NAME=iOS",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
+        "-DCMAKE_OSX_SYSROOT=iphonesimulator",
+        "-DCMAKE_BUILD_TYPE=Release",
+        iosCppDir.absolutePath,
+        "-C", File(iosCppDir, "CMakeLists-ios.txt").absolutePath
+    )
+    
+    doLast {
+        exec {
+            workingDir = buildDir
+            commandLine("cmake", "--build", ".", "--config", "Release")
+        }
+    }
+}
+
+// Task to create XCFramework from both architectures
+tasks.register<Exec>("createIosXCFramework") {
+    description = "Create XCFramework from iOS arm64 device and simulator libraries"
+    group = "ios build"
+    dependsOn("buildIosArm64", "buildIosSimArm64")
+    
+    val xcframeworkDir = File(iosBuildDir, "libopenmpt.xcframework")
+    val deviceLib = File(iosBuildDir, "arm64-device/lib/Release/libopenmpt.a")
+    val simulatorLib = File(iosBuildDir, "arm64-simulator/lib/Release/libopenmpt.a")
+    
+    doFirst {
+        // Remove existing xcframework
+        xcframeworkDir.deleteRecursively()
+    }
+    
+    commandLine(
+        "xcodebuild", "-create-xcframework",
+        "-library", deviceLib.absolutePath,
+        "-headers", File(iosCppDir, "libopenmpt").absolutePath,
+        "-library", simulatorLib.absolutePath,
+        "-headers", File(iosCppDir, "libopenmpt").absolutePath,
+        "-output", xcframeworkDir.absolutePath
+    )
+}
+
+// Task to copy headers to shared module
+tasks.register<Copy>("copyIosHeaders") {
+    description = "Copy libopenmpt headers to shared/src/iosMain/headers"
+    group = "ios build"
+    
+    from(File(iosCppDir, "libopenmpt")) {
+        include("libopenmpt.h")
+        include("libopenmpt_config.h")
+        include("libopenmpt_version.h")
+    }
+    into(iosHeadersDir)
+    
+    doFirst {
+        iosHeadersDir.mkdirs()
+    }
+}
+
+// Task to export XCFramework to shared module
+tasks.register<Copy>("exportIosLibs") {
+    description = "Export iOS XCFramework to shared/src/iosMain/libs"
+    group = "ios build"
+    dependsOn("createIosXCFramework", "copyIosHeaders")
+    
+    from(File(iosBuildDir, "libopenmpt.xcframework"))
+    into(File(iosOutputDir, "libopenmpt.xcframework"))
+    
+    doFirst {
+        iosOutputDir.mkdirs()
+    }
+}
+
+// Convenience task to build all iOS artifacts
+tasks.register("buildIos") {
+    description = "Build libopenmpt for all iOS architectures and export to shared module"
+    group = "ios build"
+    dependsOn("exportIosLibs")
+}

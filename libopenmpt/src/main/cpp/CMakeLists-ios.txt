@@ -1,0 +1,216 @@
+cmake_minimum_required(VERSION 3.21)
+project(libopenmpt C CXX)
+
+# iOS deployment target
+set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum iOS deployment version")
+
+# C/C++ Standards
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Build type defaults to Release
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Compiler flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wall -fexceptions -frtti")
+
+# Definitions
+add_definitions(
+    -DLIBOPENMPT_BUILD
+    # No external dependencies - no MPT_WITH_* flags
+    # This means no MP3, OGG, Vorbis support but all native tracker formats work
+)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/common
+)
+
+# Source files (from Android.mk)
+set(LIBOPENMPT_SOURCES
+    # Common
+    common/ComponentManager.cpp
+    common/Logging.cpp
+    common/mptFileType.cpp
+    common/mptPathString.cpp
+    common/mptRandom.cpp
+    common/mptStringBuffer.cpp
+    common/mptTime.cpp
+    common/Profiler.cpp
+    common/serialization_utils.cpp
+    common/version.cpp
+    
+    # libopenmpt API
+    libopenmpt/libopenmpt_c.cpp
+    libopenmpt/libopenmpt_cxx.cpp
+    libopenmpt/libopenmpt_impl.cpp
+    libopenmpt/libopenmpt_ext_impl.cpp
+    
+    # soundlib core
+    soundlib/AudioCriticalSection.cpp
+    soundlib/ContainerMMCMP.cpp
+    soundlib/ContainerPP20.cpp
+    soundlib/ContainerUMX.cpp
+    soundlib/ContainerXPK.cpp
+    soundlib/Dlsbank.cpp
+    soundlib/Fastmix.cpp
+    soundlib/InstrumentExtensions.cpp
+    soundlib/InstrumentSynth.cpp
+    soundlib/ITCompression.cpp
+    soundlib/ITTools.cpp
+    
+    # Module loaders
+    soundlib/Load_667.cpp
+    soundlib/Load_669.cpp
+    soundlib/Load_amf.cpp
+    soundlib/Load_ams.cpp
+    soundlib/Load_c67.cpp
+    soundlib/Load_cba.cpp
+    soundlib/Load_dbm.cpp
+    soundlib/Load_digi.cpp
+    soundlib/Load_dmf.cpp
+    soundlib/Load_dsm.cpp
+    soundlib/Load_dsym.cpp
+    soundlib/Load_dtm.cpp
+    soundlib/Load_etx.cpp
+    soundlib/Load_far.cpp
+    soundlib/Load_fc.cpp
+    soundlib/Load_fmt.cpp
+    soundlib/Load_ftm.cpp
+    soundlib/Load_gdm.cpp
+    soundlib/Load_gmc.cpp
+    soundlib/Load_gt2.cpp
+    soundlib/Load_ice.cpp
+    soundlib/Load_imf.cpp
+    soundlib/Load_ims.cpp
+    soundlib/Load_it.cpp
+    soundlib/Load_itp.cpp
+    soundlib/load_j2b.cpp
+    soundlib/Load_kris.cpp
+    soundlib/Load_mdl.cpp
+    soundlib/Load_med.cpp
+    soundlib/Load_mid.cpp
+    soundlib/Load_mo3.cpp
+    soundlib/Load_mod.cpp
+    soundlib/Load_mt2.cpp
+    soundlib/Load_mtm.cpp
+    soundlib/Load_mus_km.cpp
+    soundlib/Load_okt.cpp
+    soundlib/Load_plm.cpp
+    soundlib/Load_psm.cpp
+    soundlib/Load_pt36.cpp
+    soundlib/Load_ptm.cpp
+    soundlib/Load_puma.cpp
+    soundlib/Load_rtm.cpp
+    soundlib/Load_s3m.cpp
+    soundlib/Load_sfx.cpp
+    soundlib/Load_stk.cpp
+    soundlib/Load_stm.cpp
+    soundlib/Load_stp.cpp
+    soundlib/Load_symmod.cpp
+    soundlib/Load_tcb.cpp
+    soundlib/Load_uax.cpp
+    soundlib/Load_ult.cpp
+    soundlib/Load_unic.cpp
+    soundlib/Load_wav.cpp
+    soundlib/Load_xm.cpp
+    soundlib/Load_xmf.cpp
+    
+    # soundlib utilities
+    soundlib/Message.cpp
+    soundlib/MIDIEvents.cpp
+    soundlib/MIDIMacroParser.cpp
+    soundlib/MIDIMacros.cpp
+    soundlib/MixerLoops.cpp
+    soundlib/MixerSettings.cpp
+    soundlib/MixFuncTable.cpp
+    soundlib/ModChannel.cpp
+    soundlib/modcommand.cpp
+    soundlib/ModInstrument.cpp
+    soundlib/ModSample.cpp
+    soundlib/ModSequence.cpp
+    soundlib/modsmp_ctrl.cpp
+    soundlib/mod_specifications.cpp
+    soundlib/MODTools.cpp
+    soundlib/MPEGFrame.cpp
+    soundlib/OggStream.cpp
+    soundlib/OPL.cpp
+    soundlib/Paula.cpp
+    soundlib/patternContainer.cpp
+    soundlib/pattern.cpp
+    soundlib/PlaybackTest.cpp
+    soundlib/PlayState.cpp
+    soundlib/RowVisitor.cpp
+    soundlib/S3MTools.cpp
+    soundlib/SampleFormats.cpp
+    soundlib/SampleFormatBRR.cpp
+    soundlib/SampleFormatFLAC.cpp
+    soundlib/SampleFormatMediaFoundation.cpp
+    soundlib/SampleFormatMP3.cpp
+    soundlib/SampleFormatOpus.cpp
+    soundlib/SampleFormatSFZ.cpp
+    soundlib/SampleFormatVorbis.cpp
+    soundlib/SampleIO.cpp
+    soundlib/Sndfile.cpp
+    soundlib/Snd_flt.cpp
+    soundlib/Snd_fx.cpp
+    soundlib/Sndmix.cpp
+    soundlib/SoundFilePlayConfig.cpp
+    soundlib/UMXTools.cpp
+    soundlib/UpgradeModule.cpp
+    soundlib/Tables.cpp
+    soundlib/Tagging.cpp
+    soundlib/TinyFFT.cpp
+    soundlib/tuningCollection.cpp
+    soundlib/tuning.cpp
+    soundlib/WAVTools.cpp
+    soundlib/WindowedFIR.cpp
+    soundlib/XMTools.cpp
+    
+    # Plugins
+    soundlib/plugins/DigiBoosterEcho.cpp
+    soundlib/plugins/dmo/DMOPlugin.cpp
+    soundlib/plugins/dmo/DMOUtils.cpp
+    soundlib/plugins/dmo/Chorus.cpp
+    soundlib/plugins/dmo/Compressor.cpp
+    soundlib/plugins/dmo/Distortion.cpp
+    soundlib/plugins/dmo/Echo.cpp
+    soundlib/plugins/dmo/Flanger.cpp
+    soundlib/plugins/dmo/Gargle.cpp
+    soundlib/plugins/dmo/I3DL2Reverb.cpp
+    soundlib/plugins/dmo/ParamEq.cpp
+    soundlib/plugins/dmo/WavesReverb.cpp
+    soundlib/plugins/LFOPlugin.cpp
+    soundlib/plugins/PluginManager.cpp
+    soundlib/plugins/PlugInterface.cpp
+    soundlib/plugins/SymMODEcho.cpp
+    
+    # DSP
+    sounddsp/AGC.cpp
+    sounddsp/DSP.cpp
+    sounddsp/EQ.cpp
+    sounddsp/Reverb.cpp
+)
+
+# Create static library
+add_library(openmpt STATIC ${LIBOPENMPT_SOURCES})
+
+# Set library properties
+set_target_properties(openmpt PROPERTIES
+    OUTPUT_NAME "openmpt"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/libopenmpt/libopenmpt.h;${CMAKE_CURRENT_SOURCE_DIR}/libopenmpt/libopenmpt_config.h"
+)
+
+# Install targets
+install(TARGETS openmpt
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/libopenmpt
+)

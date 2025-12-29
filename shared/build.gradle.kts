@@ -18,9 +18,27 @@ kotlin {
         }
     }
     
-    // iOS targets
-    iosArm64()
-    iosSimulatorArm64()
+    // iOS targets with cinterop for libopenmpt
+    iosArm64 {
+        compilations.getByName("main") {
+            cinterops {
+                val libopenmpt by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/libopenmpt.def"))
+                    includeDirs(project.file("src/iosMain/headers"))
+                }
+            }
+        }
+    }
+    iosSimulatorArm64 {
+        compilations.getByName("main") {
+            cinterops {
+                val libopenmpt by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/libopenmpt.def"))
+                    includeDirs(project.file("src/iosMain/headers"))
+                }
+            }
+        }
+    }
     
     // Desktop (JVM) target
     jvm("desktop")
@@ -62,7 +80,7 @@ kotlin {
         val wasmJsMain by getting
     }
 }
-
+//
 android {
     namespace = "com.beyondeye.openmpt.core"
     compileSdk = 36
