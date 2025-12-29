@@ -12,14 +12,14 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 - **Metadata Display**: Shows module information (title, artist, format, etc.)
 - **Playback Settings**: Speed and pitch control with presets
 
-## Supported Platforms //
+## Supported Platforms
 
 | Platform | Status  | Audio Backend               |
-|----------|---------|-----------------------------|
+|----------|---------|-----------------------------||
 | Android | ✅ Ready | Oboe + libopenmpt           |
-| Desktop (JVM) | ✅ Ready | JavaSound audio +libopenmpt |
-| iOS | 🚧 Stub | To be implemented           |
-| Web (WASM/JS) | ✅ Ready | Web Audio API +libopenmpt     |
+| Desktop (JVM) | ✅ Ready | JavaSound + libopenmpt |
+| iOS | ✅ Ready | AudioUnit + libopenmpt           |
+| Web (WASM/JS) | ✅ Ready | Web Audio API + libopenmpt     |
 
 ## Architecture
 
@@ -44,9 +44,9 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 │  ├─ createModPlayer() expect/actual factory         │
 │  └─ Platform implementations:                       │
 │      ├─ AndroidModPlayer (JNI + Oboe)               │
-│      ├─ IosModPlayer (stub)                         │
-│      ├─ DesktopModPlayer (stub)                     │
-│      └─ WasmModPlayer (stub)                        │
+│      ├─ IosModPlayer (cinterop + AudioUnit)         │
+│      ├─ DesktopModPlayer (JNI + JavaSound)          │
+│      └─ WasmModPlayer (JS interop + Web Audio)      │
 └──────────────────┬──────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────┐
@@ -136,6 +136,11 @@ libopenmpt/                             # Native library build module
 ./gradlew :app:wasmJsBrowserDevelopmentRun
 ```
 
+**Build iOS libraries:**
+```bash
+./gradlew :libopenmpt:buildIos
+```
+
 **Install Android app:**
 ```bash
 ./gradlew :app:installDebug
@@ -205,10 +210,13 @@ libopenmpt 0.8.3 supports a wide range of tracker formats:
 - JavaSound `SourceDataLine` for 16-bit PCM audio output
 - Complete playback control with state management
 
-### iOS 🚧
-- Stub implementation
-- Needs Kotlin/Native interop with libopenmpt
-- Needs CoreAudio integration
+### iOS ✅
+- Full native implementation with Kotlin/Native cinterop
+- libopenmpt compiled as XCFramework (arm64 device + arm64 simulator)
+- AudioUnit (RemoteIO) for low-latency audio output
+- Complete playback control with state management
+- Note: `loadModuleFromPath()` not implemented (use `loadModule(ByteArray)` instead)
+- Note: Background audio session not configured (add AVAudioSession setup if needed)
 
 ### Web (WASM/JS) ✅
 - Full implementation with libopenmpt compiled to WASM
