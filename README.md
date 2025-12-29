@@ -12,7 +12,7 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 - **Metadata Display**: Shows module information (title, artist, format, etc.)
 - **Playback Settings**: Speed and pitch control with presets
 
-## Supported Platforms
+## Supported Platforms //
 
 | Platform | Status  | Audio Backend               |
 |----------|---------|-----------------------------|

@@ -22,9 +22,16 @@ kotlin {
         }
     }
     
-    // iOS targets
-    iosArm64()
-    iosSimulatorArm64()
+    // iOS targets with framework configuration for Xcode integration
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "app"
+            isStatic = true
+        }
+    }
     
     // Desktop (JVM) target
     jvm("desktop")

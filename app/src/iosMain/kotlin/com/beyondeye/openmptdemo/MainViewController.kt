@@ -24,18 +24,12 @@ fun initKoin() {
     }
 }
 
-//TODO remember to add here logger init when iOS platform will be implemented
-// see https://github.com/sergejsha/logger?tab=readme-ov-file#ios-usage
-/*
-init() {
-    LogKt.initializeLogger { builder in
-        builder.registerIosLogSink(logPrinter: LogPrinterCompanion.shared.Default)
-    }
-}
-
-private let TAG = "SampleApp"
-LogKt.d(tag: TAG) {
-    "debug message"
-}
-
- */
+// Note: Logger initialization for iOS is done in Swift code (iOSApp.swift)
+// See: https://github.com/sergejsha/logger?tab=readme-ov-file#ios-usage
+//
+// The Swift initialization code is:
+// ```swift
+// LoggerKt.initializeLogger { builder in
+//     builder.registerIosLogSink(logPrinter: LogPrinterCompanion.shared.Default)
+// }
+// ```
