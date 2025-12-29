@@ -3,12 +3,14 @@ package com.beyondeye.openmpt.core
 import kotlinx.cinterop.*
 import platform.AudioToolbox.*
 import platform.CoreAudio.*
+import platform.CoreAudioTypes.*
 import platform.darwin.OSStatus
 
 /**
  * iOS Audio Engine using AudioUnit for low-latency audio playback.
  * This class manages the audio output and calls a render callback to get audio data.
  */
+@OptIn(ExperimentalForeignApi::class)
 class IosAudioEngine(
     private val sampleRate: Int = 48000,
     private val bufferSize: Int = 1024
@@ -46,7 +48,7 @@ class IosAudioEngine(
             // Create instance
             val audioUnitPtr = alloc<AudioComponentInstanceVar>()
             var status = AudioComponentInstanceNew(component, audioUnitPtr.ptr)
-            if (status != noErr.toInt()) {
+            if (status != 0) { //noErr.toInt()
                 println("IosAudioEngine: Failed to create audio component instance: $status")
                 return false
             }
@@ -72,14 +74,14 @@ class IosAudioEngine(
                 sizeOf<AudioStreamBasicDescription>().toUInt()
             )
             
-            if (status != noErr.toInt()) {
+            if (status != 0) { //noErr.toInt()
                 println("IosAudioEngine: Failed to set stream format: $status")
                 return false
             }
             
             // Initialize the audio unit
             status = AudioUnitInitialize(audioUnit)
-            if (status != noErr.toInt()) {
+            if (status != 0) { //noErr.toInt()
                 println("IosAudioEngine: Failed to initialize audio unit: $status")
                 return false
             }
@@ -110,7 +112,7 @@ class IosAudioEngine(
         val unit = audioUnit ?: return false
         
         val status = AudioOutputUnitStart(unit)
-        if (status != noErr.toInt()) {
+        if (status != 0) { //noErr.toInt()
             println("IosAudioEngine: Failed to start audio unit: $status")
             return false
         }
@@ -126,7 +128,7 @@ class IosAudioEngine(
         val unit = audioUnit ?: return false
         
         val status = AudioOutputUnitStop(unit)
-        if (status != noErr.toInt()) {
+        if (status != 0) { //noErr.toInt()
             println("IosAudioEngine: Failed to stop audio unit: $status")
             return false
         }
