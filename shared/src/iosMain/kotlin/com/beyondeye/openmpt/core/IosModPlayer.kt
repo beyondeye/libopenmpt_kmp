@@ -207,14 +207,16 @@ class IosModPlayer : ModPlayer {
     override fun getMetadata(): ModMetadata {
         val mod = module ?: return ModMetadata()
         
-        return ModMetadata(
-            title = openmpt_module_get_metadata(mod, "title")?.toKString() ?: "",
-            artist = openmpt_module_get_metadata(mod, "artist")?.toKString() ?: "",
-            tracker = openmpt_module_get_metadata(mod, "tracker")?.toKString() ?: "",
-            type = openmpt_module_get_metadata(mod, "type")?.toKString() ?: "",
-            typeLong = openmpt_module_get_metadata(mod, "type_long")?.toKString() ?: "",
-            message = openmpt_module_get_metadata(mod, "message")?.toKString() ?: ""
-        )
+        return memScoped {
+            ModMetadata(
+                title = openmpt_module_get_metadata(mod, "title".cstr.ptr)?.toKString() ?: "",
+                artist = openmpt_module_get_metadata(mod, "artist".cstr.ptr)?.toKString() ?: "",
+                tracker = openmpt_module_get_metadata(mod, "tracker".cstr.ptr)?.toKString() ?: "",
+                type = openmpt_module_get_metadata(mod, "type".cstr.ptr)?.toKString() ?: "",
+                typeLong = openmpt_module_get_metadata(mod, "type_long".cstr.ptr)?.toKString() ?: "",
+                message = openmpt_module_get_metadata(mod, "message".cstr.ptr)?.toKString() ?: ""
+            )
+        }
     }
     
     override fun getCurrentOrder(): Int {
