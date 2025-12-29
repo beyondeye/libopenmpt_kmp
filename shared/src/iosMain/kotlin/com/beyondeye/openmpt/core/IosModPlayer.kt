@@ -24,8 +24,8 @@ class IosModPlayer : ModPlayer {
     private val _positionFlow = MutableStateFlow(0.0)
     override val positionFlow: StateFlow<Double> = _positionFlow.asStateFlow()
     
-    // libopenmpt module handle
-    private var module: CPointer<openmpt_module>? = null
+    // libopenmpt module handle (using COpaquePointer due to cinterop commonization)
+    private var module: COpaquePointer? = null
     
     // Audio engine for iOS
     private val audioEngine = IosAudioEngine(SAMPLE_RATE, BUFFER_SIZE)
@@ -73,7 +73,7 @@ class IosModPlayer : ModPlayer {
             }
         }
         
-        _duration = openmpt_module_get_duration_seconds(module)
+        _duration = openmpt_module_get_duration_seconds(module?.reinterpret())
         _isModuleLoaded = true
         _playbackStateFlow.value = PlaybackState.Stopped
         
@@ -97,7 +97,7 @@ class IosModPlayer : ModPlayer {
         audioEngine.release()
         
         module?.let { mod ->
-            openmpt_module_destroy(mod)
+            openmpt_module_destroy(mod.reinterpret())
         }
         module = null
         _isModuleLoaded = false
@@ -127,7 +127,7 @@ class IosModPlayer : ModPlayer {
         
         audioEngine.stop()
         module?.let { mod ->
-            openmpt_module_set_position_seconds(mod, 0.0)
+            openmpt_module_set_position_seconds(mod.reinterpret(), 0.0)
         }
         _positionFlow.value = 0.0
         _playbackStateFlow.value = PlaybackState.Stopped
@@ -135,21 +135,21 @@ class IosModPlayer : ModPlayer {
     
     override fun seek(positionSeconds: Double) {
         module?.let { mod ->
-            openmpt_module_set_position_seconds(mod, positionSeconds)
-            _positionFlow.value = openmpt_module_get_position_seconds(mod)
+            openmpt_module_set_position_seconds(mod.reinterpret(), positionSeconds)
+            _positionFlow.value = openmpt_module_get_position_seconds(mod.reinterpret())
         }
     }
     
     override fun setRepeatCount(count: Int) {
         module?.let { mod ->
-            openmpt_module_set_repeat_count(mod, count)
+            openmpt_module_set_repeat_count(mod.reinterpret(), count)
         }
     }
     
     override fun setMasterGain(gainMillibel: Int) {
         module?.let { mod ->
             openmpt_module_set_render_param(
-                mod,
+                mod.reinterpret(),
                 OPENMPT_MODULE_RENDER_MASTERGAIN_MILLIBEL,
                 gainMillibel
             )
@@ -159,7 +159,7 @@ class IosModPlayer : ModPlayer {
     override fun setStereoSeparation(percent: Int) {
         module?.let { mod ->
             openmpt_module_set_render_param(
-                mod,
+                mod.reinterpret(),
                 OPENMPT_MODULE_RENDER_STEREOSEPARATION_PERCENT,
                 percent
             )
@@ -182,13 +182,13 @@ class IosModPlayer : ModPlayer {
     
     private fun applyTempoFactor() {
         module?.let { mod ->
-            openmpt_module_ctl_set_floatingpoint(mod, "play.tempo_factor", _tempoFactor)
+            openmpt_module_ctl_set_floatingpoint(mod.reinterpret(), "play.tempo_factor", _tempoFactor)
         }
     }
     
     private fun applyPitchFactor() {
         module?.let { mod ->
-            openmpt_module_ctl_set_floatingpoint(mod, "play.pitch_factor", _pitchFactor)
+            openmpt_module_ctl_set_floatingpoint(mod.reinterpret(), "play.pitch_factor", _pitchFactor)
         }
     }
     
@@ -199,7 +199,7 @@ class IosModPlayer : ModPlayer {
         get() = _playbackStateFlow.value == PlaybackState.Playing
     
     override val positionSeconds: Double
-        get() = module?.let { openmpt_module_get_position_seconds(it) } ?: 0.0
+        get() = module?.let { openmpt_module_get_position_seconds(it.reinterpret()) } ?: 0.0
     
     override val durationSeconds: Double
         get() = _duration
@@ -209,30 +209,30 @@ class IosModPlayer : ModPlayer {
         
         return memScoped {
             ModMetadata(
-                title = openmpt_module_get_metadata(mod, "title".cstr.ptr)?.toKString() ?: "",
-                artist = openmpt_module_get_metadata(mod, "artist".cstr.ptr)?.toKString() ?: "",
-                tracker = openmpt_module_get_metadata(mod, "tracker".cstr.ptr)?.toKString() ?: "",
-                type = openmpt_module_get_metadata(mod, "type".cstr.ptr)?.toKString() ?: "",
-                typeLong = openmpt_module_get_metadata(mod, "type_long".cstr.ptr)?.toKString() ?: "",
-                message = openmpt_module_get_metadata(mod, "message".cstr.ptr)?.toKString() ?: ""
+                title = openmpt_module_get_metadata(mod.reinterpret(), "title".cstr.ptr)?.toKString() ?: "",
+                artist = openmpt_module_get_metadata(mod.reinterpret(), "artist".cstr.ptr)?.toKString() ?: "",
+                tracker = openmpt_module_get_metadata(mod.reinterpret(), "tracker".cstr.ptr)?.toKString() ?: "",
+                type = openmpt_module_get_metadata(mod.reinterpret(), "type".cstr.ptr)?.toKString() ?: "",
+                typeLong = openmpt_module_get_metadata(mod.reinterpret(), "type_long".cstr.ptr)?.toKString() ?: "",
+                message = openmpt_module_get_metadata(mod.reinterpret(), "message".cstr.ptr)?.toKString() ?: ""
             )
         }
     }
     
     override fun getCurrentOrder(): Int {
-        return module?.let { openmpt_module_get_current_order(it) } ?: -1
+        return module?.let { openmpt_module_get_current_order(it.reinterpret()) } ?: -1
     }
     
     override fun getCurrentPattern(): Int {
-        return module?.let { openmpt_module_get_current_pattern(it) } ?: -1
+        return module?.let { openmpt_module_get_current_pattern(it.reinterpret()) } ?: -1
     }
     
     override fun getCurrentRow(): Int {
-        return module?.let { openmpt_module_get_current_row(it) } ?: -1
+        return module?.let { openmpt_module_get_current_row(it.reinterpret()) } ?: -1
     }
     
     override fun getNumChannels(): Int {
-        return module?.let { openmpt_module_get_num_channels(it) } ?: 0
+        return module?.let { openmpt_module_get_num_channels(it.reinterpret()) } ?: 0
     }
     
     /**
@@ -255,7 +255,7 @@ class IosModPlayer : ModPlayer {
             val nativeBuffer = allocArray<FloatVar>(buffer.size)
             
             val framesRendered = openmpt_module_read_interleaved_float_stereo(
-                mod,
+                mod.reinterpret(),
                 SAMPLE_RATE,
                 frameCount.toULong(),
                 nativeBuffer
@@ -267,7 +267,7 @@ class IosModPlayer : ModPlayer {
             }
             
             // Update position
-            _positionFlow.value = openmpt_module_get_position_seconds(mod)
+            _positionFlow.value = openmpt_module_get_position_seconds(mod.reinterpret())
             
             // Check for end of playback
             if (framesRendered.toInt() == 0) {
