@@ -2,6 +2,8 @@ package com.beyondeye.openmptdemo
 
 import androidx.compose.ui.window.ComposeUIViewController
 import com.beyondeye.openmptdemo.di.appModule
+import de.halfbit.logger.initializeLogger
+import de.halfbit.logger.sink.android.registerIosLogSink
 import org.koin.core.context.startKoin
 
 /**
@@ -19,17 +21,13 @@ fun MainViewController() = ComposeUIViewController { App() }
  * Typically called in the iOS app's application delegate or main entry point.
  */
 fun initKoin() {
+    // Initialize logger for iOS
+    initializeLogger {
+        registerIosLogSink()
+    }
+    
+    // Initialize Koin DI
     startKoin {
         modules(appModule)
     }
 }
-
-// Note: Logger initialization for iOS is done in Swift code (iOSApp.swift)
-// See: https://github.com/sergejsha/logger?tab=readme-ov-file#ios-usage
-//
-// The Swift initialization code is:
-// ```swift
-// LoggerKt.initializeLogger { builder in
-//     builder.registerIosLogSink(logPrinter: LogPrinterCompanion.shared.Default)
-// }
-// ```

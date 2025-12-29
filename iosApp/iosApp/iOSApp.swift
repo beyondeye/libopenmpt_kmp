@@ -7,14 +7,8 @@ import app
 struct iOSApp: App {
     
     init() {
-        // Initialize Koin for dependency injection
+        // Initialize Koin for dependency injection (this also initializes the logger)
         MainViewControllerKt.doInitKoin()
-        
-        // Initialize logger for iOS
-        // Using the logger library's iOS initialization
-        LoggerKt.initializeLogger { builder in
-            builder.registerIosLogSink(logPrinter: LogPrinterCompanion.shared.Default)
-        }
     }
     
     var body: some Scene {
