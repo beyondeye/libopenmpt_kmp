@@ -1,5 +1,9 @@
 *.iml
 .gradle
+
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
 /local.properties
 .DS_Store
 /build
