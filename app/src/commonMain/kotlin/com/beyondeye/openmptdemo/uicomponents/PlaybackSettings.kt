@@ -23,10 +23,11 @@ import com.beyondeye.openmptdemo.ModPlayerViewModel
 import com.beyondeye.openmptdemo.timeutils.formatDecimal
 
 @Composable
-fun SpeedPitchControls(
+fun PlaybackSettings(
     viewModel: ModPlayerViewModel,
     enabled: Boolean
 ) {
+    var masterGain by rememberSaveable { mutableStateOf(0.0) }
     var autoLoop by rememberSaveable { mutableStateOf(false) }
     var playbackSpeed by rememberSaveable { mutableStateOf(1.0) }
     var pitch by rememberSaveable { mutableStateOf(1.0) }
@@ -35,6 +36,51 @@ fun SpeedPitchControls(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Master Gain Control
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Master Gain")
+                Text(
+                    if (masterGain >= 0) "+${formatDecimal(masterGain, 1)} dB"
+                    else "${formatDecimal(masterGain, 1)} dB"
+                )
+            }
+
+            Slider(
+                value = masterGain.toFloat(),
+                onValueChange = {
+                    masterGain = it.toDouble()
+                    viewModel.setMasterGain(masterGain)
+                },
+                valueRange = -10f..10f,
+                enabled = enabled
+            )
+
+            // Master Gain preset button (reset to 0 dB)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        masterGain = 0.0
+                        viewModel.setMasterGain(0.0)
+                    },
+                    enabled = enabled
+                ) {
+                    Text("0 dB")
+                }
+            }
+        }
+
+        HorizontalDivider()
+
         // Auto-loop toggle
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -145,13 +191,15 @@ fun SpeedPitchControls(
         // Reset button
         Button(
             onClick = {
+                masterGain = 0.0
                 playbackSpeed = 1.0
                 pitch = 1.0
+                viewModel.setMasterGain(0.0)
                 viewModel.setPlaybackSpeed(1.0)
                 viewModel.setPitch(1.0)
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = enabled && (playbackSpeed != 1.0 || pitch != 1.0)
+            enabled = enabled && (masterGain != 0.0 || playbackSpeed != 1.0 || pitch != 1.0)
         ) {
             Text("Reset to Defaults")
         }

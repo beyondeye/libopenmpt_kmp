@@ -25,7 +25,7 @@ import com.beyondeye.openmptdemo.uicomponents.CollapsibleSection
 import com.beyondeye.openmptdemo.uicomponents.MetadataDisplay
 import com.beyondeye.openmptdemo.uicomponents.ModuleFileLoader
 import com.beyondeye.openmptdemo.uicomponents.PlaybackControls
-import com.beyondeye.openmptdemo.uicomponents.SpeedPitchControls
+import com.beyondeye.openmptdemo.uicomponents.PlaybackSettings
 import de.halfbit.logger.e
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -129,7 +129,7 @@ fun ModPlayerScreen(
             title = "Playback Settings",
             initiallyExpanded = false
         ) {
-            SpeedPitchControls(
+            PlaybackSettings(
                 viewModel = viewModel,
                 enabled = playbackState !is PlaybackState.Idle && playbackState !is PlaybackState.Loading
             )

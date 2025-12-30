@@ -183,6 +183,13 @@ class ModPlayerViewModel(
         return player.getPitch()
     }
     
+    fun setMasterGain(gainDb: Double) {
+        // Convert dB to millibels (1 dB = 100 mB)
+        val gainMillibel = (gainDb.coerceIn(-10.0, 10.0) * 100).toInt()
+        player.setMasterGain(gainMillibel)
+        d(TAG) { "Master gain set to $gainDb dB ($gainMillibel mB)" }
+    }
+    
     // ========== Queries ==========
     
     fun getDuration(): Double = player.durationSeconds
