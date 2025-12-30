@@ -122,6 +122,67 @@ The iOS implementation has no external dependencies beyond:
 2. The audio render callback mechanism may need refinement for production use
 3. Background audio session configuration is not included (add AVAudioSession setup for background playback)
 
+## For Library Consumers
+
+### Scenario 1: Local/Monorepo Dependency
+
+If you're consuming the `shared` module as a **local project dependency** (like the `app` module in this repository):
+
+✅ **No additional iOS setup is required!**
+
+The libopenmpt static library is **automatically linked** via the cinterop configuration in `shared/build.gradle.kts`:
+
+```kotlin
+extraOpts(
+    "-libraryPath", "${project.file("src/iosMain/libs/libopenmpt.xcframework/ios-arm64-simulator").absolutePath}",
+    "-staticLibrary", "libopenmpt.a"
+)
+```
+
+Your app module just needs to depend on `shared`:
+```kotlin
+dependencies {
+    implementation(project(":shared"))
+}
+```
+
+### Scenario 2: Published Maven Artifact Dependency
+
+**⚠️ Important**: If you are using the `shared` module as a **published Maven artifact** (e.g., `com.beyondeye.openmpt:shared`), you must provide the native library yourself.
+
+#### Why Manual Setup is Required for Published Artifacts
+
+When the `shared` module is published to Maven, Kotlin/Native klibs cannot include compiled static library binaries. The cinterop bindings are included, but the actual `libopenmpt.a` is not.
+
+#### Steps for Published Artifact Consumers
+
+1. **Build or obtain the XCFramework**
+   ```bash
+   # From this repository
+   ./gradlew :libopenmpt:buildIos
+   ```
+
+2. **Copy to your project**
+   ```
+   your-app/src/iosMain/libs/libopenmpt.xcframework/
+   ```
+
+3. **Add linker options in your build.gradle.kts**
+   ```kotlin
+   iosArm64 {
+       binaries.framework {
+           linkerOpts("-L${projectDir}/src/iosMain/libs/libopenmpt.xcframework/ios-arm64", "-lopenmpt")
+       }
+   }
+   iosSimulatorArm64 {
+       binaries.framework {
+           linkerOpts("-L${projectDir}/src/iosMain/libs/libopenmpt.xcframework/ios-arm64-simulator", "-lopenmpt")
+       }
+   }
+   ```
+
+📖 **For complete instructions, see [README_library_consumers.md](README_library_consumers.md)**
+
 ## Future Improvements
 
 - Add AVAudioSession configuration for background playback

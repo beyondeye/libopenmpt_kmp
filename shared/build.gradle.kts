@@ -19,12 +19,19 @@ kotlin {
     }
     
     // iOS targets with cinterop for libopenmpt
+    // NOTE: The static library is linked here to properly resolve symbols.
+    // When publishing this library, consumers must provide their own libopenmpt.xcframework.
     iosArm64 {
         compilations.getByName("main") {
             cinterops {
                 val libopenmpt by creating {
                     defFile(project.file("src/nativeInterop/cinterop/libopenmpt.def"))
                     includeDirs(project.file("src/iosMain/headers"))
+                    // Link the static library for iOS arm64 (device)
+                    extraOpts(
+                        "-libraryPath", "${project.file("src/iosMain/libs/libopenmpt.xcframework/ios-arm64").absolutePath}",
+                        "-staticLibrary", "libopenmpt.a"
+                    )
                 }
             }
         }
@@ -35,6 +42,11 @@ kotlin {
                 val libopenmpt by creating {
                     defFile(project.file("src/nativeInterop/cinterop/libopenmpt.def"))
                     includeDirs(project.file("src/iosMain/headers"))
+                    // Link the static library for iOS arm64 simulator
+                    extraOpts(
+                        "-libraryPath", "${project.file("src/iosMain/libs/libopenmpt.xcframework/ios-arm64-simulator").absolutePath}",
+                        "-staticLibrary", "libopenmpt.a"
+                    )
                 }
             }
         }

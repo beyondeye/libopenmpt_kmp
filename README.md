@@ -234,6 +234,42 @@ libopenmpt 0.8.3 supports a wide range of tracker formats:
 - **Oboe**: 1.8.0 (Android low-latency audio)
 - **Kotlinx Coroutines**: 1.10.2
 
+## Using as a Library
+
+If you want to use the `shared` module as a dependency in your own Kotlin Multiplatform project, please note the following **important requirements**:
+
+### Native Library Requirements
+
+The `shared` module provides Kotlin bindings for libopenmpt but **does NOT bundle** the native library for all platforms:
+
+| Platform | Native Library Status |
+|----------|----------------------|
+| Android | ✅ Bundled in AAR - no action needed |
+| Desktop (JVM) | ✅ Bundled - no action needed |
+| iOS | ⚠️ **Manual setup required** - you must provide `libopenmpt.xcframework` |
+| Wasm/JS | ⚠️ **Manual setup required** - you must provide `libopenmpt.js` and `libopenmpt.wasm` |
+
+### Quick Setup for iOS Consumers
+
+1. Build or obtain `libopenmpt.xcframework`
+2. Copy it to `your-app/src/iosMain/libs/`
+3. Add `linkerOpts` in your `build.gradle.kts`:
+   ```kotlin
+   iosArm64 {
+       binaries.framework {
+           linkerOpts("-L${projectDir}/src/iosMain/libs/libopenmpt.xcframework/ios-arm64", "-lopenmpt")
+       }
+   }
+   ```
+
+### Quick Setup for Wasm/JS Consumers
+
+1. Obtain `libopenmpt.js` and `libopenmpt.wasm` files
+2. Place them in your web app's resources
+3. Call `LibOpenMpt.initializeLibOpenMpt()` before using ModPlayer
+
+📖 **For detailed instructions, see [docs/README_library_consumers.md](docs/README_library_consumers.md)**
+
 ## License
 
 This project uses:

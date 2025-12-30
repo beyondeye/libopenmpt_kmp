@@ -96,6 +96,7 @@ tasks.register("exportPrebuiltLibs") {
 val iosCmakeDir = file("src/main/cpp/ios")
 val iosCppDir = file("src/main/cpp")
 val iosBuildDir = layout.buildDirectory.dir("ios").get().asFile
+// iOS libs are exported to the shared module where cinterop is configured
 val iosOutputDir = rootProject.file("shared/src/iosMain/libs")
 val iosHeadersDir = rootProject.file("shared/src/iosMain/headers/libopenmpt")
 

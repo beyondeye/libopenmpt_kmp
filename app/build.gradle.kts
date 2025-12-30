@@ -23,11 +23,15 @@ kotlin {
     }
     
     // iOS targets with framework configuration for Xcode integration
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
+    // The libopenmpt static library is linked via cinterop in the shared module
+    iosArm64 {
+        binaries.framework {
+            baseName = "app"
+            isStatic = true
+        }
+    }
+    iosSimulatorArm64 {
+        binaries.framework {
             baseName = "app"
             isStatic = true
         }
