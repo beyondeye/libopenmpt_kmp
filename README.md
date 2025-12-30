@@ -114,6 +114,11 @@ libopenmpt/                             # Native library build module
 - CMake 3.22.1 or newer
 - JDK 11 or newer (use `/opt/android-studio/jbr` as specified in project rules)
 
+**Additional requirements for macOS Desktop builds:**
+- Xcode and Xcode Command Line Tools
+- CMake 3.21+ (install via `brew install cmake`)
+- See [docs/README_macos_build.md](docs/README_macos_build.md) for detailed instructions
+
 ### Build Commands
 
 **Build libopenmpt first (Android):**
@@ -129,6 +134,26 @@ libopenmpt/                             # Native library build module
 **Run Desktop app:**
 ```bash
 ./gradlew :app:run
+```
+
+**Build Desktop native libraries for macOS (if not already built):**
+```bash
+# Build libopenmpt.dylib
+cd libopenmpt/src/main/cpp/macos
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release -j8
+
+# Copy to resources
+cp lib/libopenmpt.dylib ../../../../../../shared/src/desktopMain/resources/native/macos-arm64/
+
+# Build JNI wrapper (from project root)
+cd shared/src/desktopMain/cpp
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DLIBOPENMPT_INCLUDE_DIR=$(pwd)/../../../../libopenmpt/src/main/cpp \
+  -DLIBOPENMPT_LIBRARY=$(pwd)/../../resources/native/macos-arm64/libopenmpt.dylib
+cmake --build . --config Release
 ```
 
 **Build WASM/JS:**
@@ -306,3 +331,5 @@ When extending platform support:
 - [Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/)
 - [Koin Documentation](https://insert-koin.io/docs/quickstart/kmp/)
 - [Oboe Documentation](https://github.com/google/oboe)
+- [macOS Build Guide](docs/README_macos_build.md)
+- [Desktop Implementation Guide](docs/README_desktop_implementation.md)

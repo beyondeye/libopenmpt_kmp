@@ -18,3 +18,4 @@ local.properties
 /shared/build/
 /.kotlin/
 /shared/src/desktopMain/cpp/build/
+/libopenmpt/src/main/cpp/macos/build/

@@ -146,7 +146,29 @@ sudo pacman -S libopenmpt
 
 libopenmpt source is included in this project at `libopenmpt/src/main/cpp/`.
 
-For desktop, build with:
+**For macOS (recommended - no external dependencies):**
+```bash
+cd libopenmpt/src/main/cpp/macos
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release -j8
+```
+
+This builds libopenmpt WITHOUT external dependencies (no MP3, OGG, Vorbis support). All native tracker formats (MOD, XM, IT, S3M, etc.) work perfectly.
+
+The built library will be at: `libopenmpt/src/main/cpp/macos/build/lib/libopenmpt.dylib`
+
+**For macOS with external dependencies (MP3, OGG, Vorbis support):**
+```bash
+cd libopenmpt/src/main/cpp
+./build/download_externals.sh  # Downloads mpg123, libogg, libvorbis
+cd build/xcode-macosx
+xcodebuild -workspace libopenmpt.xcworkspace -scheme libopenmpt -configuration Release -arch arm64
+```
+
+See [README_macos_build.md](README_macos_build.md) for detailed macOS build instructions.
+
+**For Linux:**
 ```bash
 cd libopenmpt/src/main/cpp
 make CONFIG=standard shared
@@ -252,9 +274,36 @@ cmake .. \
 cmake .. -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 ```
 
+## macOS-Specific Notes
+
+### Building for Apple Silicon (M1/M2/M3)
+
+Use the `macos-arm64` directory:
+```bash
+mkdir -p shared/src/desktopMain/resources/native/macos-arm64
+cp libopenmpt/src/main/cpp/macos/build/lib/libopenmpt.dylib shared/src/desktopMain/resources/native/macos-arm64/
+```
+
+### Building for Intel Macs
+
+Use the `macos-x64` directory:
+```bash
+mkdir -p shared/src/desktopMain/resources/native/macos-x64
+# Build with -DCMAKE_OSX_ARCHITECTURES=x86_64
+```
+
+### Code Signing
+
+For distribution, you may need to sign the dylibs:
+```bash
+codesign --force --sign - libopenmpt.dylib
+codesign --force --sign - libmodplayer_desktop.dylib
+```
+
 ## Future Improvements
 
 - [ ] Gradle integration for automatic native build
 - [ ] Pre-built binaries for all platforms in CI
 - [ ] Windows support testing
-- [ ] macOS code signing
+- [x] macOS arm64 support
+- [ ] macOS code signing automation
