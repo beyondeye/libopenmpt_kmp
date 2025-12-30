@@ -14,12 +14,12 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 
 ## Supported Platforms
 
-| Platform | Status  | Audio Backend               |
-|----------|---------|-----------------------------||
-| Android | ✅ Ready | Oboe + libopenmpt           |
-| Desktop (JVM) | ✅ Ready | JavaSound + libopenmpt |
-| iOS | ✅ Ready | AudioUnit + libopenmpt           |
-| Web (WASM/JS) | ✅ Ready | Web Audio API + libopenmpt     |
+| Platform       | Status   | Audio Backend              |
+|----------------|----------|----------------------------|
+| Android        | ✅ Ready | Oboe + libopenmpt          |
+| Desktop (JVM)  | ✅ Ready | JavaSound + libopenmpt     |
+| iOS            | ✅ Ready | AudioUnit + libopenmpt     |
+| Web (WASM/JS)  | ✅ Ready | Web Audio API + libopenmpt |
 
 ## Architecture
 
