@@ -214,7 +214,13 @@ class IosModPlayer : ModPlayer {
                 tracker = openmpt_module_get_metadata(mod.reinterpret(), "tracker".cstr.ptr)?.toKString() ?: "",
                 type = openmpt_module_get_metadata(mod.reinterpret(), "type".cstr.ptr)?.toKString() ?: "",
                 typeLong = openmpt_module_get_metadata(mod.reinterpret(), "type_long".cstr.ptr)?.toKString() ?: "",
-                message = openmpt_module_get_metadata(mod.reinterpret(), "message".cstr.ptr)?.toKString() ?: ""
+                message = openmpt_module_get_metadata(mod.reinterpret(), "message".cstr.ptr)?.toKString() ?: "",
+                durationSeconds = openmpt_module_get_duration_seconds(mod.reinterpret()),
+                numChannels = openmpt_module_get_num_channels(mod.reinterpret()),
+                numPatterns = openmpt_module_get_num_patterns(mod.reinterpret()),
+                numOrders = openmpt_module_get_num_orders(mod.reinterpret()),
+                numInstruments = openmpt_module_get_num_instruments(mod.reinterpret()),
+                numSamples = openmpt_module_get_num_samples(mod.reinterpret())
             )
         }
     }
