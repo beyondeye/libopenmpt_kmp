@@ -27,11 +27,14 @@ All publications are properly configured:
 ### HOW Generate GPG Keys
 
 ```bash
+brew install gpg
 gpg --full-generate-key
+gpg --list-keys --keyid-format LONG
 gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
 gpg --armor --export-secret-keys YOUR_KEY_ID | base64 > gpg-key-base64.txt
 ```
-
+### Obtain sonatype username and password:
+https://central.sonatype.com/usertoken
 ### 3. Configure GitHub Repository Secrets
 
 Add these secrets to your repository (Settings → Secrets and variables → Actions):
