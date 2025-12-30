@@ -68,7 +68,7 @@ class IosModPlayer : ModPlayer {
             )
             
             if (module == null) {
-                println("IosModPlayer: Failed to load module, error: ${errorCode.value}")
+                // println("IosModPlayer: Failed to load module, error: ${errorCode.value}")
                 return false
             }
         }
@@ -88,7 +88,7 @@ class IosModPlayer : ModPlayer {
         // For iOS, we typically load from memory (ByteArray from resources)
         // File path loading would require NSFileManager to read the file
         // For now, this is not implemented - use loadModule(ByteArray) instead
-        println("IosModPlayer: loadModuleFromPath not implemented. Use loadModule(ByteArray) instead.")
+        // println("IosModPlayer: loadModuleFromPath not implemented. Use loadModule(ByteArray) instead.")
         return false
     }
     
@@ -107,10 +107,22 @@ class IosModPlayer : ModPlayer {
     }
     
     override fun play() {
-        if (!_isModuleLoaded || module == null) return
+        // println("IosModPlayer: play() called, isModuleLoaded=$_isModuleLoaded, module=${module != null}")
+        if (!_isModuleLoaded || module == null) {
+            // println("IosModPlayer: play() - module not loaded, returning")
+            return
+        }
+        
+        // Set playback state BEFORE starting audio to avoid race condition
+        // where the render callback checks state before it's set
+        _playbackStateFlow.value = PlaybackState.Playing
+        // println("IosModPlayer: play() - playback state set to Playing")
         
         if (audioEngine.start()) {
-            _playbackStateFlow.value = PlaybackState.Playing
+            // println("IosModPlayer: play() - audioEngine.start() succeeded")
+        } else {
+            // println("IosModPlayer: play() - audioEngine.start() failed!")
+            _playbackStateFlow.value = PlaybackState.Stopped
         }
     }
     
@@ -241,18 +253,36 @@ class IosModPlayer : ModPlayer {
         return module?.let { openmpt_module_get_num_channels(it.reinterpret()) } ?: 0
     }
     
+    // Counter for logging
+    private var renderCallCount = 0
+    
     /**
      * Render audio to the provided buffer.
      * Called from the audio engine's render callback.
      * @return Number of frames rendered
      */
     private fun renderAudio(buffer: FloatArray): Int {
-        val mod = module ?: return 0
+        renderCallCount++
         
-        if (_playbackStateFlow.value != PlaybackState.Playing) {
+        val mod = module ?: run {
+            if (renderCallCount <= 5) {
+                // println("IosModPlayer: renderAudio() - module is null!")
+            }
+            return 0
+        }
+        
+        val currentState = _playbackStateFlow.value
+        if (currentState != PlaybackState.Playing) {
+            if (renderCallCount <= 5) {
+                // println("IosModPlayer: renderAudio() - not playing, state=$currentState")
+            }
             // Fill with silence
             buffer.fill(0f)
             return 0
+        }
+        
+        if (renderCallCount <= 5 || renderCallCount % 100 == 0) {
+            // println("IosModPlayer: renderAudio() called, renderCallCount=$renderCallCount, bufferSize=${buffer.size}")
         }
         
         val frameCount = buffer.size / 2 // Stereo, so divide by 2
@@ -273,10 +303,16 @@ class IosModPlayer : ModPlayer {
             }
             
             // Update position
-            _positionFlow.value = openmpt_module_get_position_seconds(mod.reinterpret())
+            val newPosition = openmpt_module_get_position_seconds(mod.reinterpret())
+            _positionFlow.value = newPosition
+            
+            if (renderCallCount <= 5 || renderCallCount % 100 == 0) {
+                // println("IosModPlayer: renderAudio() - framesRendered=${framesRendered.toInt()}, position=$newPosition")
+            }
             
             // Check for end of playback
             if (framesRendered.toInt() == 0) {
+                // println("IosModPlayer: renderAudio() - end of playback reached")
                 _playbackStateFlow.value = PlaybackState.Stopped
             }
             
