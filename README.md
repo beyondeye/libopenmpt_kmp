@@ -5,6 +5,7 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 ## Features
 
 - **Native MOD Playback**: Uses libopenmpt C library for authentic tracker music reproduction
+- **Prebuilt Binaries Included**: All native libraries (libopenmpt) are prebuilt and included for all platforms
 - **Cross-Platform UI**: Compose Multiplatform for consistent UI across all platforms
 - **Dependency Injection**: Koin for platform-specific ModPlayer injection
 - **Reactive State Management**: Kotlin Flows for real-time UI updates
@@ -351,16 +352,33 @@ If you want to use the `shared` module as a dependency in your own Kotlin Multip
 
 ### Native Library Requirements
 
-The `shared` module provides Kotlin bindings for libopenmpt but **does NOT bundle** the native library for all platforms:
+**Prebuilt binaries are included** for all platforms in the repository. The setup required depends on how you consume the `shared` module:
+
+#### Scenario 1: Local/Monorepo Dependency (including full source)
+
+If you include the `shared` module as a **local project dependency** (like the `app` module in this repository):
 
 | Platform | Native Library Status |
 |----------|----------------------|
 | Android | ✅ Bundled in AAR - no action needed |
 | Desktop (JVM) | ✅ Bundled - no action needed |
-| iOS | ⚠️ **Manual setup required** - you must provide `libopenmpt.xcframework` |
-| Wasm/JS | ⚠️ **Manual setup required** - you must provide `libopenmpt.js` and `libopenmpt.wasm` |
+| iOS | ✅ Automatically linked via cinterop - no action needed |
+| Wasm/JS | ⚠️ **Manual setup required** - must copy `libopenmpt.js` and `libopenmpt.wasm` to app module |
 
-### Quick Setup for iOS Consumers
+#### Scenario 2: Published Maven Artifact Dependency
+
+If you consume the `shared` module as a **published Maven artifact**:
+
+| Platform | Native Library Status |
+|----------|----------------------|
+| Android | ✅ Bundled in AAR - no action needed |
+| Desktop (JVM) | ✅ Bundled - no action needed |
+| iOS | ⚠️ **Manual setup required** - klibs cannot include compiled static library binaries |
+| Wasm/JS | ⚠️ **Manual setup required** - must provide `libopenmpt.js` and `libopenmpt.wasm` |
+
+### Quick Setup for iOS Consumers (Published Artifact Only)
+
+> **Note:** If using the shared module as a local/monorepo dependency, no iOS setup is required.
 
 1. Build or obtain `libopenmpt.xcframework`
 2. Copy it to `your-app/src/iosMain/libs/`
@@ -375,8 +393,10 @@ The `shared` module provides Kotlin bindings for libopenmpt but **does NOT bundl
 
 ### Quick Setup for Wasm/JS Consumers
 
-1. Obtain `libopenmpt.js` and `libopenmpt.wasm` files
-2. Place them in your web app's resources
+> **Note:** Manual setup is required for Wasm/JS regardless of how you consume the shared module.
+
+1. The prebuilt `libopenmpt.js` and `libopenmpt.wasm` files are located in `shared/src/wasmJsMain/resources/`
+2. Copy them to your app module's resources (e.g., `your-app/src/wasmJsMain/resources/`)
 3. Call `LibOpenMpt.initializeLibOpenMpt()` before using ModPlayer
 
 📖 **For detailed instructions, see [docs/README_library_consumers.md](docs/README_library_consumers.md)**
