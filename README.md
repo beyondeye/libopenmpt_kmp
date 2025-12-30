@@ -21,6 +21,92 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 | iOS            | ✅ Ready | AudioUnit + libopenmpt     |
 | Web (WASM/JS)  | ✅ Ready | Web Audio API + libopenmpt |
 
+## Demo Player Features
+
+The demo app showcases all capabilities of the ModPlayer API:
+
+### File Loading
+- **Sample File**: Load a bundled sample MOD file from app resources
+- **File Picker**: Load any tracker module from the file system (supports 60+ formats)
+
+### Track Information Display
+- Module title and artist
+- Format type and tracker name
+- Number of channels, patterns, instruments, and samples
+- Total duration
+
+### Playback Controls
+- **Play/Pause**: Toggle playback with a single button
+- **Stop**: Stop playback and reset to beginning
+- **Seek Bar**: Drag to seek to any position with real-time position display
+- **Playback Info**: Live display of current order, pattern, and row position
+
+### Playback Settings
+- **Master Gain**: Volume control from -10dB to +10dB with reset preset
+- **Auto-Loop**: Toggle infinite repeat mode
+- **Speed Control**: Adjust tempo from 0.25x to 2.0x with preset buttons (0.5x, 1.0x, 1.5x, 2.0x)
+- **Pitch Control**: Adjust pitch from 0.25x to 2.0x with preset buttons (0.5x, 1.0x, 1.5x, 2.0x)
+
+## ModPlayer API Reference
+
+The `ModPlayer` interface (`shared/src/commonMain/kotlin/com/beyondeye/openmpt/core/ModPlayer.kt`) provides a platform-agnostic API for MOD music playback.
+
+### Lifecycle Methods
+
+| Method | Description |
+|--------|-------------|
+| `loadModule(data: ByteArray): Boolean` | Load a module from a byte array. Returns `true` on success. |
+| `loadModuleSuspend(data: ByteArray): Boolean` | Suspend version of `loadModule`. Recommended for platforms requiring async initialization (e.g., wasmJS). |
+| `loadModuleFromPath(path: String): Boolean` | Load a module from a file path. Not available on all platforms. |
+| `release()` | Release all resources. Must be called when the player is no longer needed. |
+
+### Playback Control Methods
+
+| Method | Description |
+|--------|-------------|
+| `play()` | Start or resume playback. |
+| `pause()` | Pause playback. |
+| `stop()` | Stop playback and reset position to the beginning. |
+| `seek(positionSeconds: Double)` | Seek to a specific position in seconds. |
+
+### Configuration Methods
+
+| Method | Description |
+|--------|-------------|
+| `setRepeatCount(count: Int)` | Set repeat mode: `-1` = infinite, `0` = no repeat, `n` = repeat n times. |
+| `setMasterGain(gainMillibel: Int)` | Set master volume in millibels (0 = normal, negative = quieter, positive = louder). |
+| `setStereoSeparation(percent: Int)` | Set stereo separation (0-200%, default 100%). |
+| `setPlaybackSpeed(speed: Double)` | Set playback speed/tempo factor (0.25 to 2.0, 1.0 = normal). |
+| `getPlaybackSpeed(): Double` | Get current playback speed. |
+| `setPitch(pitch: Double)` | Set pitch factor (0.25 to 2.0, 1.0 = normal). |
+| `getPitch(): Double` | Get current pitch factor. |
+
+### State Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `playbackState` | `PlaybackState` | Current state: `Idle`, `Loading`, `Loaded`, `Playing`, `Paused`, `Stopped`, or `Error`. |
+| `isPlaying` | `Boolean` | Whether the module is currently playing. |
+| `positionSeconds` | `Double` | Current playback position in seconds. |
+| `durationSeconds` | `Double` | Total duration of the module in seconds. |
+
+### Module Information Methods
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getMetadata()` | `ModMetadata` | Get metadata (title, artist, format, tracker, channels, patterns, instruments, samples, duration). |
+| `getCurrentOrder()` | `Int` | Get current order position (-1 if no module loaded). |
+| `getCurrentPattern()` | `Int` | Get current pattern being played (-1 if no module loaded). |
+| `getCurrentRow()` | `Int` | Get current row in the pattern (-1 if no module loaded). |
+| `getNumChannels()` | `Int` | Get number of channels (0 if no module loaded). |
+
+### Reactive State Observers
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `playbackStateFlow` | `StateFlow<PlaybackState>` | Flow of playback state changes for reactive UI updates. |
+| `positionFlow` | `StateFlow<Double>` | Flow of position updates in seconds, updated periodically during playback. |
+
 ## Architecture
 
 ```
