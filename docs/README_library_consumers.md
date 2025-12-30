@@ -2,6 +2,26 @@
 
 This document provides instructions for developers who want to use the `shared` module as a dependency in their own Kotlin Multiplatform projects.
 
+## Maven Coordinates
+
+```kotlin
+// Add to your commonMain dependencies
+implementation("com.beyond-eye:libopenmpt-kmp:1.0.0")
+```
+
+**Available artifacts:**
+
+| Artifact | Platform |
+|----------|----------|
+| `com.beyond-eye:libopenmpt-kmp:1.0.0` | Common (metadata) |
+| `com.beyond-eye:libopenmpt-kmp-androidRelease:1.0.0` | Android (AAR) |
+| `com.beyond-eye:libopenmpt-kmp-desktop:1.0.0` | Desktop JVM |
+| `com.beyond-eye:libopenmpt-kmp-iosArm64:1.0.0` | iOS arm64 (device) |
+| `com.beyond-eye:libopenmpt-kmp-iosSimulatorArm64:1.0.0` | iOS arm64 simulator |
+| `com.beyond-eye:libopenmpt-kmp-wasmJs:1.0.0` | Wasm/JS (browser) |
+
+> **Note:** You typically only need to depend on `com.beyond-eye:libopenmpt-kmp:1.0.0` in your commonMain dependencies. Gradle will automatically resolve the correct platform-specific artifacts.
+
 ## Usage Scenarios
 
 There are two primary ways to consume the shared module:
@@ -214,7 +234,7 @@ kotlin {
         commonMain {
             dependencies {
                 // Add the shared module dependency
-                implementation("com.beyondeye.openmpt:shared:<version>")
+                implementation("com.beyond-eye:libopenmpt-kmp:1.0.0")
             }
         }
     }

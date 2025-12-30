@@ -1,0 +1,184 @@
+# ============================================================================
+# Maven Central Publishing Workflow
+# ============================================================================
+# This workflow publishes the shared module to Maven Central via Sonatype OSSRH.
+# 
+# Trigger: Manual workflow dispatch or GitHub Release creation
+#
+# Required Repository Secrets:
+#   - OSSRH_USERNAME: Sonatype OSSRH username
+#   - OSSRH_PASSWORD: Sonatype OSSRH password
+#   - GPG_PRIVATE_KEY: Base64-encoded GPG private key for signing
+#   - GPG_PASSPHRASE: GPG key passphrase
+#
+# Publishing targets:
+#   - Android (AAR with bundled .so files)
+#   - iOS (klib with cinterop bindings)
+#   - Desktop JVM (JAR with bundled native libraries)
+#   - Wasm/JS (klib)
+# ============================================================================
+
+name: Publish to Maven Central
+
+on:
+  # Trigger on release creation
+  release:
+    types: [published]
+  
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      publish_to_maven:
+        description: 'Publish to Maven Central (false = local only)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+# Concurrency: Cancel in-progress runs on same branch
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Gradle configuration
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+  # Use Android Studio's bundled JDK for consistency
+  JAVA_VERSION: '17'
+
+jobs:
+  # ==========================================================================
+  # Build and Publish Job
+  # ==========================================================================
+  # Uses macOS runner to support iOS builds (requires Xcode)
+  publish:
+    name: Build & Publish
+    runs-on: macos-latest
+    
+    steps:
+      # ----------------------------------------------------------------------
+      # Setup
+      # ----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version detection
+      
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+      
+      # Cache Kotlin/Native compiler and dependencies
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+      
+      # ----------------------------------------------------------------------
+      # Validate Secrets (for Sonatype publish)
+      # ----------------------------------------------------------------------
+      - name: Validate publishing secrets
+        if: github.event_name == 'release' || github.event.inputs.publish_to_maven == 'true'
+        run: |
+          if [ -z "${{ secrets.OSSRH_USERNAME }}" ]; then
+            echo "::error::OSSRH_USERNAME secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.OSSRH_PASSWORD }}" ]; then
+            echo "::error::OSSRH_PASSWORD secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+            echo "::error::GPG_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.GPG_PASSPHRASE }}" ]; then
+            echo "::error::GPG_PASSPHRASE secret is not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+      
+      # ----------------------------------------------------------------------
+      # Build Native Libraries
+      # ----------------------------------------------------------------------
+      - name: Build Android native libraries (Release)
+        run: ./gradlew :libopenmpt:exportPrebuiltLibsRelease --no-daemon
+      
+      # iOS libraries should already be in the repository (prebuilt XCFramework)
+      # If you need to rebuild them:
+      # - name: Build iOS native libraries
+      #   run: ./gradlew :libopenmpt:buildIos --no-daemon
+      
+      # ----------------------------------------------------------------------
+      # Build All Targets
+      # ----------------------------------------------------------------------
+      - name: Build shared module (all targets)
+        run: ./gradlew :shared:build --no-daemon
+      
+      # ----------------------------------------------------------------------
+      # Publish to Local Repository (for verification)
+      # ----------------------------------------------------------------------
+      - name: Publish to local repository
+        run: ./gradlew :shared:publishAllPublicationsToLocalRepository --no-daemon
+      
+      - name: List published artifacts
+        run: |
+          echo "📦 Published artifacts:"
+          find shared/build/repo -type f -name "*.pom" -o -name "*.jar" -o -name "*.klib" -o -name "*.aar" | head -50
+      
+      # ----------------------------------------------------------------------
+      # Publish to Maven Central (Sonatype OSSRH)
+      # ----------------------------------------------------------------------
+      - name: Publish to Maven Central
+        if: github.event_name == 'release' || github.event.inputs.publish_to_maven == 'true'
+        run: ./gradlew :shared:publishAllPublicationsToSonatypeRepository --no-daemon
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      
+      # ----------------------------------------------------------------------
+      # Upload Artifacts (for inspection)
+      # ----------------------------------------------------------------------
+      - name: Upload local repository artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-local-repo
+          path: shared/build/repo/
+          retention-days: 7
+      
+      # ----------------------------------------------------------------------
+      # Summary
+      # ----------------------------------------------------------------------
+      - name: Print summary
+        run: |
+          echo "## 📦 Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "release" ] || [ "${{ github.event.inputs.publish_to_maven }}" == "true" ]; then
+            echo "✅ Published to **Maven Central (Sonatype OSSRH)**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Maven coordinates:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo 'implementation("com.beyond-eye:libopenmpt-kmp:${{ github.event.release.tag_name || '1.0.0' }}")' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📋 Built and published to **local repository only**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "To publish to Maven Central, either:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Create a GitHub Release" >> $GITHUB_STEP_SUMMARY
+            echo "2. Run this workflow manually with 'publish_to_maven: true'" >> $GITHUB_STEP_SUMMARY
+          fi

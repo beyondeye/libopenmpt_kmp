@@ -13,6 +13,30 @@ A **Compose Multiplatform** application demonstrating native MOD music playback 
 - **Metadata Display**: Shows module information (title, artist, format, etc.)
 - **Playback Settings**: Speed and pitch control with presets
 
+## Installation
+
+Add the library to your Kotlin Multiplatform project:
+
+### Gradle (Kotlin DSL)
+
+```kotlin
+// In your commonMain dependencies
+dependencies {
+    implementation("com.beyond-eye:libopenmpt-kmp:1.0.0")
+}
+```
+
+### Platform-Specific Setup
+
+| Platform | Setup Required |
+|----------|----------------|
+| Android | ✅ No action required - native libraries bundled in AAR |
+| Desktop (JVM) | ✅ No action required - native libraries bundled |
+| iOS | ⚠️ Manual setup - must provide `libopenmpt.xcframework` |
+| Wasm/JS | ⚠️ Manual setup - must provide `libopenmpt.js` and `libopenmpt.wasm` |
+
+📖 **For detailed setup instructions, see [Using as a Library](#using-as-a-library) and [docs/README_library_consumers.md](docs/README_library_consumers.md)**
+
 ## Supported Platforms
 
 | Platform       | Status   | Audio Backend              |

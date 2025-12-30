@@ -4,7 +4,29 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    id("maven-publish")
+    id("signing")
 }
+
+// ============================================================================
+// Publishing Configuration
+// ============================================================================
+val libraryGroup: String by project
+val libraryArtifactId: String by project
+val libraryVersion: String by project
+val libraryName: String by project
+val libraryDescription: String by project
+val pomUrl: String by project
+val pomScmUrl: String by project
+val pomScmConnection: String by project
+val pomScmDevConnection: String by project
+val pomLicenseName: String by project
+val pomLicenseUrl: String by project
+val pomDeveloperId: String by project
+val pomDeveloperName: String by project
+
+group = libraryGroup
+version = libraryVersion
 
 kotlin {
     // Apply default hierarchy template to create intermediate source sets (iosMain, appleMain, etc.)
@@ -16,6 +38,8 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
+        // Enable publishing for Android target
+        publishLibraryVariants("release")
     }
     
     // iOS targets with cinterop for libopenmpt
@@ -190,5 +214,114 @@ afterEvaluate {
             }
             dependsOn(exportTask)
         }
+    }
+}
+
+// ============================================================================
+// Maven Publishing Configuration
+// ============================================================================
+
+/**
+ * Configure publishing for Maven Central via Sonatype OSSRH.
+ * 
+ * Required environment variables or gradle.properties:
+ * - OSSRH_USERNAME / ossrhUsername: Sonatype OSSRH username
+ * - OSSRH_PASSWORD / ossrhPassword: Sonatype OSSRH password
+ * - GPG_PRIVATE_KEY / signing.key: Base64-encoded GPG private key (for CI)
+ * - GPG_PASSPHRASE / signing.password: GPG key passphrase
+ * 
+ * For local development, configure in ~/.gradle/gradle.properties:
+ *   ossrhUsername=your-username
+ *   ossrhPassword=your-password
+ *   signing.keyId=LAST_8_CHARS_OF_KEY_ID
+ *   signing.password=your-gpg-passphrase
+ *   signing.secretKeyRingFile=/path/to/secring.gpg
+ */
+publishing {
+    publications {
+        withType<MavenPublication> {
+            // Artifact ID customization - use libraryArtifactId for the main artifact
+            artifactId = when (name) {
+                "kotlinMultiplatform" -> libraryArtifactId
+                else -> "$libraryArtifactId-$name"
+            }
+            
+            pom {
+                name.set(libraryName)
+                description.set(libraryDescription)
+                url.set(pomUrl)
+                
+                licenses {
+                    license {
+                        name.set(pomLicenseName)
+                        url.set(pomLicenseUrl)
+                        distribution.set("repo")
+                    }
+                }
+                
+                developers {
+                    developer {
+                        id.set(pomDeveloperId)
+                        name.set(pomDeveloperName)
+                    }
+                }
+                
+                scm {
+                    url.set(pomScmUrl)
+                    connection.set(pomScmConnection)
+                    developerConnection.set(pomScmDevConnection)
+                }
+            }
+        }
+    }
+    
+    repositories {
+        maven {
+            name = "sonatype"
+            
+            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            
+            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+            
+            credentials {
+                username = project.findProperty("ossrhUsername") as String? 
+                    ?: System.getenv("OSSRH_USERNAME") 
+                    ?: ""
+                password = project.findProperty("ossrhPassword") as String? 
+                    ?: System.getenv("OSSRH_PASSWORD") 
+                    ?: ""
+            }
+        }
+        
+        // Local maven repository for testing
+        maven {
+            name = "local"
+            url = uri(layout.buildDirectory.dir("repo"))
+        }
+    }
+}
+
+// Configure signing for all publications
+signing {
+    // Use in-memory signing key for CI environments
+    val signingKey = project.findProperty("signing.key") as String? 
+        ?: System.getenv("GPG_PRIVATE_KEY")
+    val signingPassword = project.findProperty("signing.password") as String? 
+        ?: System.getenv("GPG_PASSPHRASE")
+    
+    if (signingKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
+    
+    // Sign all publications
+    sign(publishing.publications)
+}
+
+// Make signing required only when publishing to sonatype (not for local testing)
+tasks.withType<Sign>().configureEach {
+    onlyIf { 
+        gradle.taskGraph.hasTask(":shared:publishAllPublicationsToSonatypeRepository") ||
+        gradle.taskGraph.hasTask(":shared:publishToSonatype")
     }
 }
