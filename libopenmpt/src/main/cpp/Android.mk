@@ -54,6 +54,9 @@ LOCAL_CFLAGS   += -fvisibility=hidden -Wall -DLIBOPENMPT_BUILD -DMPT_WITH_ZLIB
 LOCAL_CPPFLAGS +=#-fvisibility=hidden -Wall -DLIBOPENMPT_BUILD -DMPT_WITH_ZLIB
 LOCAL_LDLIBS   += -lz
 
+# Enable 16 KB page size support for Android 15+ compatibility
+LOCAL_LDFLAGS  += -Wl,-z,max-page-size=16384
+
 MPT_SVNURL?=
 MPT_SVNVERSION?=
 MPT_SVNDATE?=
@@ -274,4 +277,3 @@ LOCAL_SRC_FILES += \
 	
 
 include $(BUILD_SHARED_LIBRARY)
-

@@ -14,7 +14,7 @@ composeMultiplatform = "1.9.3"
 kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.9.0"
 materialIconsCore = "1.7.8"
-oboe = "1.8.0"
+oboe = "1.9.3"
 
 # Koin DI
 koin = "4.1.1"

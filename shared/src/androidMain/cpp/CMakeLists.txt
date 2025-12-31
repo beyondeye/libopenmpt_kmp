@@ -33,6 +33,10 @@ add_library(modplayer SHARED
     ModPlayerEngine.cpp
 )
 
+# Enable 16 KB page size support for Android 15+ compatibility
+# This ensures LOAD segments are aligned at 16 KB boundaries
+target_link_options(modplayer PRIVATE "-Wl,-z,max-page-size=16384")
+
 # Add include directories to the target
 # Path explanation: from shared/src/androidMain/cpp/ we go up 4 levels to reach project root
 #   .. -> shared/src/androidMain/
