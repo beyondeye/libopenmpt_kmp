@@ -31,8 +31,12 @@ brew install gpg
 gpg --full-generate-key
 gpg --list-keys --keyid-format LONG
 gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
+gpg --armor --export-secret-keys YOUR_KEY_ID > gpg-key.asc
+or
 gpg --armor --export-secret-keys YOUR_KEY_ID | base64 > gpg-key-base64.txt
 ```
+NOTE that the github workflow require the ascii-armored format for the gpg-key
+Copy the entire output (including -----BEGIN PGP PRIVATE KEY BLOCK----- and -----END PGP PRIVATE KEY BLOCK-----) into the GitHub secret.
 ### Obtain sonatype username and password:
 https://central.sonatype.com/usertoken
 ### 3. Configure GitHub Repository Secrets
