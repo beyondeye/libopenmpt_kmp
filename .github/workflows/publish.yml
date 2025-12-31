@@ -8,7 +8,7 @@
 # Required Repository Secrets:
 #   - OSSRH_USERNAME: Sonatype OSSRH username
 #   - OSSRH_PASSWORD: Sonatype OSSRH password
-#   - GPG_PRIVATE_KEY: Base64-encoded GPG private key for signing
+#   - GPG_PRIVATE_KEY: ASCII-armored GPG private key (output of: gpg --armor --export-secret-keys KEY_ID)
 #   - GPG_PASSPHRASE: GPG key passphrase
 #
 # Publishing targets:
