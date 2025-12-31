@@ -112,19 +112,12 @@ jobs:
           echo "✅ All required secrets are configured"
       
       # ----------------------------------------------------------------------
-      # Build Native Libraries
-      # ----------------------------------------------------------------------
-      - name: Build Android native libraries (Release)
-        run: ./gradlew :libopenmpt:exportPrebuiltLibsRelease --no-daemon
-      
-      # iOS libraries should already be in the repository (prebuilt XCFramework)
-      # If you need to rebuild them:
-      # - name: Build iOS native libraries
-      #   run: ./gradlew :libopenmpt:buildIos --no-daemon
-      
-      # ----------------------------------------------------------------------
       # Build All Targets
       # ----------------------------------------------------------------------
+      # Note: Native libraries (Android .so, iOS XCFramework, Desktop natives, Wasm)
+      # are pre-committed to the repository. No rebuild is needed here.
+      # To update native libraries, use the "Rebuild Native Libraries" workflow.
+      
       - name: Build shared module (all targets)
         run: ./gradlew :shared:build --no-daemon
       

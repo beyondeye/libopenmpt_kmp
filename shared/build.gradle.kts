@@ -123,9 +123,15 @@ android {
     
     // Map KMP source set directories to Android source sets
     // This ensures jniLibs from androidMain are properly packaged into the AAR/APK
+    // Note: Release libraries are in jniLibs/, Debug libraries in jniLibsDebug/
     sourceSets {
         getByName("main") {
+            // Release jniLibs - used for publishing and release builds
             jniLibs.srcDirs("src/androidMain/jniLibs")
+        }
+        getByName("debug") {
+            // Debug jniLibs - separate directory to avoid task dependency conflicts
+            jniLibs.srcDirs("src/androidMain/jniLibsDebug")
         }
     }
     
@@ -162,9 +168,29 @@ android {
         }
     }
     
-    // jniLibs are automatically picked up from src/androidMain/jniLibs by KMP
-    // Note: Using a single jniLibs directory (not debug/release specific) is required
-    // for proper packaging of native libraries in the AAR when using KMP.
+    // ============================================================================
+    // Native Library Packaging Configuration
+    // ============================================================================
+    // 
+    // The jniLibs directories (jniLibs/ for release, jniLibsDebug/ for debug) are the
+    // AUTHORITATIVE source for libopenmpt.so. These pre-built libraries are committed
+    // to source control, allowing the shared module to be built without requiring
+    // the libopenmpt module to be rebuilt.
+    //
+    // However, CMake also references libopenmpt.so as a SHARED IMPORTED library
+    // (see src/androidMain/cpp/CMakeLists.txt) so that modplayer.so can link against it.
+    // AGP automatically tries to package any SHARED IMPORTED library, causing a
+    // duplicate file conflict with the jniLibs version.
+    //
+    // The pickFirsts rule resolves this by using the jniLibs version (which is processed
+    // first in the merge order), ensuring the committed pre-built library takes precedence.
+    // See: https://developer.android.com/r/tools/jniLibs-vs-imported-targets
+    //
+    packaging {
+        jniLibs {
+            pickFirsts.add("lib/*/libopenmpt.so")
+        }
+    }
 }
 
 dependencies {
@@ -173,49 +199,22 @@ dependencies {
 }
 
 /**
- * Task Dependencies for Native Build with libopenmpt
+ * Native Library Configuration for libopenmpt
  * 
- * This configuration ensures that libopenmpt.so is built and exported to the appropriate
- * jniLibs directory (jniLibsDebug or jniLibsRelease) BEFORE any CMake-related tasks run.
+ * IMPORTANT: The shared module relies on pre-committed native libraries (libopenmpt.so).
+ * These libraries should be committed to the repository and are NOT rebuilt during normal builds.
  * 
- * Why is this needed?
- * - The shared module's native code (modplayer) depends on libopenmpt.so
- * - CMake needs the .so file to exist during BOTH configuration and build phases
- * - Without these dependencies, CMake would fail with "missing file" errors
+ * Directory structure:
+ * - shared/src/androidMain/jniLibs/        : Release-optimized .so files (used for publishing)
+ * - shared/src/androidMain/jniLibsDebug/   : Debug .so files with symbols (for local development)
  * 
- * Task patterns covered:
- * - configureCMake*      : CMake configuration phase - validates library paths and generates build files
- * - buildCMake*          : CMake build phase - compiles native code and links against libopenmpt
- * - externalNativeBuild* : Android Gradle Plugin's native build orchestration task
- * - merge*JniLibFolders  : Merges JNI libraries from different source sets into final APK/AAR
- * - generateJsonModel*   : Generates CMake JSON model for IDE integration (Android Studio)
+ * To rebuild native libraries from source, use the "Rebuild Native Libraries" GitHub workflow
+ * or run the following Gradle tasks manually:
+ * - ./gradlew :libopenmpt:exportPrebuiltLibsRelease  (for release builds)
+ * - ./gradlew :libopenmpt:exportPrebuiltLibsDebug    (for debug builds)
  * 
- * Build variant matching:
- * - Debug tasks   → :libopenmpt:exportPrebuiltLibsDebug   (debug-optimized .so with symbols)
- * - Release tasks → :libopenmpt:exportPrebuiltLibsRelease (release-optimized .so, stripped)
+ * See docs/README_building.md for complete build instructions.
  */
-afterEvaluate {
-    // Task name patterns that require libopenmpt.so to exist before execution
-    val taskPatterns = listOf(
-        { name: String -> name.startsWith("configureCMake") },      // CMake configuration phase
-        { name: String -> name.startsWith("buildCMake") },          // CMake build phase
-        { name: String -> name.startsWith("externalNativeBuild") }, // AGP native build orchestration
-        { name: String -> name.startsWith("merge") && name.contains("JniLibFolders") }, // JNI library merging
-        { name: String -> name.startsWith("generateJsonModel") }    // CMake JSON model for IDE
-    )
-    
-    taskPatterns.forEach { pattern ->
-        tasks.matching { pattern(it.name) }.configureEach {
-            // Match build variant to appropriate libopenmpt export task
-            val exportTask = when {
-                name.contains("Debug", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsDebug"
-                name.contains("Release", ignoreCase = true) -> ":libopenmpt:exportPrebuiltLibsRelease"
-                else -> ":libopenmpt:exportPrebuiltLibsDebug" // Default to debug for safety
-            }
-            dependsOn(exportTask)
-        }
-    }
-}
 
 // ============================================================================
 // Maven Publishing Configuration

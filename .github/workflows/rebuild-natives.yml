@@ -1,0 +1,400 @@
+# ============================================================================
+# Rebuild Native Libraries Workflow
+# ============================================================================
+# This workflow rebuilds all native libraries from source and creates a PR
+# with the updated binaries.
+#
+# Trigger: Manual workflow dispatch only
+#
+# Platforms built:
+#   - Android: arm64-v8a, armeabi-v7a (.so files)
+#   - iOS: arm64 device, arm64 simulator (XCFramework)
+#   - Desktop macOS: arm64 (.dylib)
+#   - Desktop Linux: x86_64 (.so)
+#   - Desktop Windows: x86_64 (.dll)
+#   - Wasm: libopenmpt.wasm
+#
+# The workflow uses multiple runners to build platform-specific binaries:
+#   - macos-latest: iOS, macOS desktop
+#   - ubuntu-latest: Android, Linux desktop, Wasm
+#   - windows-latest: Windows desktop
+# ============================================================================
+
+name: Rebuild Native Libraries
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to rebuild'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'android'
+          - 'ios'
+          - 'desktop-macos'
+          - 'desktop-linux'
+          - 'desktop-windows'
+          - 'wasm'
+      create_pr:
+        description: 'Create PR with updated binaries'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+# Concurrency: Only one rebuild at a time
+concurrency:
+  group: rebuild-natives
+  cancel-in-progress: false
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  # ==========================================================================
+  # Android Native Libraries
+  # ==========================================================================
+  build-android:
+    name: Build Android (.so)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'android'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      
+      - name: Build Android native libraries (Release)
+        run: ./gradlew :libopenmpt:exportPrebuiltLibsRelease --no-daemon
+      
+      - name: Build Android native libraries (Debug)
+        run: ./gradlew :libopenmpt:exportPrebuiltLibsDebug --no-daemon
+      
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-natives
+          path: |
+            shared/src/androidMain/jniLibs/
+            shared/src/androidMain/jniLibsDebug/
+          retention-days: 1
+
+  # ==========================================================================
+  # iOS Native Libraries (requires macOS)
+  # ==========================================================================
+  build-ios:
+    name: Build iOS (XCFramework)
+    runs-on: macos-latest
+    if: github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'ios'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      
+      - name: Install CMake
+        run: brew install cmake
+      
+      - name: Build iOS XCFramework
+        run: ./gradlew :libopenmpt:buildIos --no-daemon
+      
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-natives
+          path: |
+            shared/src/iosMain/libs/
+            shared/src/iosMain/headers/
+          retention-days: 1
+
+  # ==========================================================================
+  # macOS Desktop Native Library (requires macOS)
+  # ==========================================================================
+  build-desktop-macos:
+    name: Build macOS Desktop (.dylib)
+    runs-on: macos-latest
+    if: github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'desktop-macos'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install CMake
+        run: brew install cmake
+      
+      - name: Build macOS native library
+        working-directory: libopenmpt/src/main/cpp/macos
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+      
+      - name: Copy to resources directory
+        run: |
+          mkdir -p shared/src/desktopMain/resources/native/macos-arm64
+          cp libopenmpt/src/main/cpp/macos/build/libopenmpt.dylib shared/src/desktopMain/resources/native/macos-arm64/
+      
+      - name: Upload macOS desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-natives
+          path: shared/src/desktopMain/resources/native/macos-arm64/
+          retention-days: 1
+
+  # ==========================================================================
+  # Linux Desktop Native Library
+  # ==========================================================================
+  build-desktop-linux:
+    name: Build Linux Desktop (.so)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'desktop-linux'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+      
+      - name: Build Linux native library
+        working-directory: libopenmpt/src/main/cpp
+        run: |
+          mkdir -p build-linux
+          cd build-linux
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+      
+      - name: Copy to resources directory
+        run: |
+          mkdir -p shared/src/desktopMain/resources/native/linux-x64
+          cp libopenmpt/src/main/cpp/build-linux/libopenmpt.so shared/src/desktopMain/resources/native/linux-x64/ || true
+      
+      - name: Upload Linux desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-natives
+          path: shared/src/desktopMain/resources/native/linux-x64/
+          retention-days: 1
+
+  # ==========================================================================
+  # Windows Desktop Native Library
+  # ==========================================================================
+  build-desktop-windows:
+    name: Build Windows Desktop (.dll)
+    runs-on: windows-latest
+    if: github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'desktop-windows'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
+      
+      - name: Build Windows native library
+        working-directory: libopenmpt/src/main/cpp
+        shell: cmd
+        run: |
+          mkdir build-windows
+          cd build-windows
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+      
+      - name: Copy to resources directory
+        shell: bash
+        run: |
+          mkdir -p shared/src/desktopMain/resources/native/windows-x64
+          cp libopenmpt/src/main/cpp/build-windows/Release/openmpt.dll shared/src/desktopMain/resources/native/windows-x64/ || true
+          cp libopenmpt/src/main/cpp/build-windows/openmpt.dll shared/src/desktopMain/resources/native/windows-x64/ || true
+      
+      - name: Upload Windows desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-natives
+          path: shared/src/desktopMain/resources/native/windows-x64/
+          retention-days: 1
+
+  # ==========================================================================
+  # Wasm Native Library
+  # ==========================================================================
+  build-wasm:
+    name: Build Wasm
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platforms == 'all' || github.event.inputs.platforms == 'wasm'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 'latest'
+      
+      - name: Build Wasm library
+        working-directory: libopenmpt/src/main/cpp
+        run: |
+          mkdir -p build-wasm
+          cd build-wasm
+          emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
+          emmake make
+      
+      - name: Copy to resources directory
+        run: |
+          mkdir -p wasm-output
+          cp libopenmpt/src/main/cpp/build-wasm/libopenmpt.js wasm-output/ || true
+          cp libopenmpt/src/main/cpp/build-wasm/libopenmpt.wasm wasm-output/ || true
+      
+      - name: Upload Wasm artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-natives
+          path: wasm-output/
+          retention-days: 1
+
+  # ==========================================================================
+  # Create Pull Request with Updated Binaries
+  # ==========================================================================
+  create-pr:
+    name: Create PR
+    runs-on: ubuntu-latest
+    needs: [build-android, build-ios, build-desktop-macos, build-desktop-linux, build-desktop-windows, build-wasm]
+    if: |
+      always() && 
+      github.event.inputs.create_pr == 'true' &&
+      (needs.build-android.result == 'success' || needs.build-android.result == 'skipped') &&
+      (needs.build-ios.result == 'success' || needs.build-ios.result == 'skipped') &&
+      (needs.build-desktop-macos.result == 'success' || needs.build-desktop-macos.result == 'skipped') &&
+      (needs.build-desktop-linux.result == 'success' || needs.build-desktop-linux.result == 'skipped') &&
+      (needs.build-desktop-windows.result == 'success' || needs.build-desktop-windows.result == 'skipped') &&
+      (needs.build-wasm.result == 'success' || needs.build-wasm.result == 'skipped')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download Android artifacts
+        if: needs.build-android.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: android-natives
+          path: shared/src/androidMain/
+      
+      - name: Download iOS artifacts
+        if: needs.build-ios.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-natives
+          path: shared/src/iosMain/
+      
+      - name: Download macOS desktop artifacts
+        if: needs.build-desktop-macos.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos-natives
+          path: shared/src/desktopMain/resources/native/macos-arm64/
+      
+      - name: Download Linux desktop artifacts
+        if: needs.build-desktop-linux.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-natives
+          path: shared/src/desktopMain/resources/native/linux-x64/
+      
+      - name: Download Windows desktop artifacts
+        if: needs.build-desktop-windows.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows-natives
+          path: shared/src/desktopMain/resources/native/windows-x64/
+      
+      - name: Download Wasm artifacts
+        if: needs.build-wasm.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-natives
+          path: wasm-temp/
+      
+      - name: Copy Wasm files to correct locations
+        if: needs.build-wasm.result == 'success'
+        run: |
+          cp wasm-temp/libopenmpt.js shared/src/wasmJsMain/resources/ || true
+          cp wasm-temp/libopenmpt.wasm shared/src/wasmJsMain/resources/ || true
+          cp wasm-temp/libopenmpt.js app/src/wasmJsMain/resources/ || true
+          cp wasm-temp/libopenmpt.wasm app/src/wasmJsMain/resources/ || true
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: Update native libraries (${{ github.event.inputs.platforms }})"
+          title: "Update Native Libraries (${{ github.event.inputs.platforms }})"
+          body: |
+            ## Native Library Update
+            
+            This PR updates the pre-built native libraries for the following platforms:
+            
+            **Platforms rebuilt:** ${{ github.event.inputs.platforms }}
+            
+            ### Checklist
+            - [ ] Verify Android .so files are working
+            - [ ] Verify iOS XCFramework is working
+            - [ ] Verify Desktop natives are working
+            - [ ] Verify Wasm is working
+            
+            ### Notes
+            - Built by GitHub Actions workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - Triggered by: @${{ github.actor }}
+          branch: update-native-libs-${{ github.run_number }}
+          delete-branch: true
+          labels: |
+            native-libs
+            automated
+
+  # ==========================================================================
+  # Summary
+  # ==========================================================================
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [build-android, build-ios, build-desktop-macos, build-desktop-linux, build-desktop-windows, build-wasm, create-pr]
+    if: always()
+    
+    steps:
+      - name: Print summary
+        run: |
+          echo "## 🔧 Native Library Rebuild Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Android | ${{ needs.build-android.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS | ${{ needs.build-ios.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS Desktop | ${{ needs.build-desktop-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux Desktop | ${{ needs.build-desktop-linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows Desktop | ${{ needs.build-desktop-windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Wasm | ${{ needs.build-wasm.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create PR | ${{ needs.create-pr.result }} |" >> $GITHUB_STEP_SUMMARY
