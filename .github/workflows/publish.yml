@@ -1,13 +1,14 @@
 # ============================================================================
 # Maven Central Publishing Workflow
 # ============================================================================
-# This workflow publishes the shared module to Maven Central via Sonatype OSSRH.
+# This workflow publishes the shared module to Maven Central via the new
+# Central Portal (https://central.sonatype.com/).
 # 
 # Trigger: Manual workflow dispatch or GitHub Release creation
 #
 # Required Repository Secrets:
-#   - OSSRH_USERNAME: Sonatype OSSRH username
-#   - OSSRH_PASSWORD: Sonatype OSSRH password
+#   - MAVEN_CENTRAL_USERNAME: Central Portal username (from https://central.sonatype.com/account)
+#   - MAVEN_CENTRAL_PASSWORD: Central Portal password/token
 #   - GPG_PRIVATE_KEY: ASCII-armored GPG private key (output of: gpg --armor --export-secret-keys KEY_ID)
 #   - GPG_PASSPHRASE: GPG key passphrase
 #
@@ -88,17 +89,17 @@ jobs:
             konan-${{ runner.os }}-
       
       # ----------------------------------------------------------------------
-      # Validate Secrets (for Sonatype publish)
+      # Validate Secrets (for Maven Central publish)
       # ----------------------------------------------------------------------
       - name: Validate publishing secrets
         if: github.event_name == 'release' || github.event.inputs.publish_to_maven == 'true'
         run: |
-          if [ -z "${{ secrets.OSSRH_USERNAME }}" ]; then
-            echo "::error::OSSRH_USERNAME secret is not set"
+          if [ -z "${{ secrets.MAVEN_CENTRAL_USERNAME }}" ]; then
+            echo "::error::MAVEN_CENTRAL_USERNAME secret is not set"
             exit 1
           fi
-          if [ -z "${{ secrets.OSSRH_PASSWORD }}" ]; then
-            echo "::error::OSSRH_PASSWORD secret is not set"
+          if [ -z "${{ secrets.MAVEN_CENTRAL_PASSWORD }}" ]; then
+            echo "::error::MAVEN_CENTRAL_PASSWORD secret is not set"
             exit 1
           fi
           if [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
@@ -122,37 +123,16 @@ jobs:
         run: ./gradlew :shared:build --no-daemon
       
       # ----------------------------------------------------------------------
-      # Publish to Local Repository (for verification)
-      # ----------------------------------------------------------------------
-      - name: Publish to local repository
-        run: ./gradlew :shared:publishAllPublicationsToLocalRepository --no-daemon
-      
-      - name: List published artifacts
-        run: |
-          echo "📦 Published artifacts:"
-          find shared/build/repo -type f -name "*.pom" -o -name "*.jar" -o -name "*.klib" -o -name "*.aar" | head -50
-      
-      # ----------------------------------------------------------------------
-      # Publish to Maven Central (Sonatype OSSRH)
+      # Publish to Maven Central (via Central Portal)
       # ----------------------------------------------------------------------
       - name: Publish to Maven Central
         if: github.event_name == 'release' || github.event.inputs.publish_to_maven == 'true'
-        run: ./gradlew :shared:publishAllPublicationsToSonatypeRepository --no-daemon
+        run: ./gradlew :shared:publishAllPublicationsToMavenCentral --no-daemon
         env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-      
-      # ----------------------------------------------------------------------
-      # Upload Artifacts (for inspection)
-      # ----------------------------------------------------------------------
-      - name: Upload local repository artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: maven-local-repo
-          path: shared/build/repo/
-          retention-days: 7
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSPHRASE }}
       
       # ----------------------------------------------------------------------
       # Summary
@@ -162,14 +142,14 @@ jobs:
           echo "## 📦 Publishing Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.event_name }}" == "release" ] || [ "${{ github.event.inputs.publish_to_maven }}" == "true" ]; then
-            echo "✅ Published to **Maven Central (Sonatype OSSRH)**" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Published to **Maven Central (Central Portal)**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Maven coordinates:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo 'implementation("com.beyond-eye:libopenmpt-kmp:${{ github.event.release.tag_name || '1.0.0' }}")' >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
-            echo "📋 Built and published to **local repository only**" >> $GITHUB_STEP_SUMMARY
+            echo "📋 Built successfully (no publishing requested)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "To publish to Maven Central, either:" >> $GITHUB_STEP_SUMMARY
             echo "1. Create a GitHub Release" >> $GITHUB_STEP_SUMMARY

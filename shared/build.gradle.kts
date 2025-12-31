@@ -1,11 +1,11 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
-    id("maven-publish")
-    id("signing")
+    alias(libs.plugins.vanniktech.publish)
 }
 
 // ============================================================================
@@ -80,6 +80,7 @@ kotlin {
     jvm("desktop")
     
     // Wasm/JS target
+    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
     }
@@ -217,110 +218,63 @@ dependencies {
  */
 
 // ============================================================================
-// Maven Publishing Configuration
+// Maven Publishing Configuration (Vanniktech Maven Publish Plugin)
 // ============================================================================
 
 /**
- * Configure publishing for Maven Central via Sonatype OSSRH.
+ * Configure publishing for Maven Central via the new Central Portal.
  * 
- * Required environment variables or gradle.properties:
- * - OSSRH_USERNAME / ossrhUsername: Sonatype OSSRH username
- * - OSSRH_PASSWORD / ossrhPassword: Sonatype OSSRH password
- * - GPG_PRIVATE_KEY / signing.key: Base64-encoded GPG private key (for CI)
- * - GPG_PASSPHRASE / signing.password: GPG key passphrase
+ * This uses the Vanniktech Maven Publish plugin which handles:
+ * - Automatic POM generation
+ * - GPG signing
+ * - Publishing to Maven Central via the new Central Portal API
+ * 
+ * Required environment variables (for CI) or gradle.properties (for local):
+ * - mavenCentralUsername: Central Portal username (from https://central.sonatype.com/account)
+ * - mavenCentralPassword: Central Portal password/token
+ * - signingInMemoryKey: ASCII-armored GPG private key
+ * - signingInMemoryKeyPassword: GPG key passphrase
  * 
  * For local development, configure in ~/.gradle/gradle.properties:
- *   ossrhUsername=your-username
- *   ossrhPassword=your-password
+ *   mavenCentralUsername=your-username
+ *   mavenCentralPassword=your-password
  *   signing.keyId=LAST_8_CHARS_OF_KEY_ID
  *   signing.password=your-gpg-passphrase
  *   signing.secretKeyRingFile=/path/to/secring.gpg
  */
-publishing {
-    publications {
-        withType<MavenPublication> {
-            // Artifact ID customization - use libraryArtifactId for the main artifact
-            artifactId = when (name) {
-                "kotlinMultiplatform" -> libraryArtifactId
-                else -> "$libraryArtifactId-$name"
-            }
-            
-            pom {
-                name.set(libraryName)
-                description.set(libraryDescription)
-                url.set(pomUrl)
-                
-                licenses {
-                    license {
-                        name.set(pomLicenseName)
-                        url.set(pomLicenseUrl)
-                        distribution.set("repo")
-                    }
-                }
-                
-                developers {
-                    developer {
-                        id.set(pomDeveloperId)
-                        name.set(pomDeveloperName)
-                    }
-                }
-                
-                scm {
-                    url.set(pomScmUrl)
-                    connection.set(pomScmConnection)
-                    developerConnection.set(pomScmDevConnection)
-                }
-            }
-        }
-    }
+mavenPublishing {
+    // Sonatype host and signing are configured via gradle.properties:
+    // SONATYPE_HOST=CENTRAL_PORTAL
+    // RELEASE_SIGNING_ENABLED=true
     
-    repositories {
-        maven {
-            name = "sonatype"
-            
-            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-            
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
-            
-            credentials {
-                username = project.findProperty("ossrhUsername") as String? 
-                    ?: System.getenv("OSSRH_USERNAME") 
-                    ?: ""
-                password = project.findProperty("ossrhPassword") as String? 
-                    ?: System.getenv("OSSRH_PASSWORD") 
-                    ?: ""
+    // Configure POM metadata
+    pom {
+        name.set(libraryName)
+        description.set(libraryDescription)
+        url.set(pomUrl)
+        
+        licenses {
+            license {
+                name.set(pomLicenseName)
+                url.set(pomLicenseUrl)
+                distribution.set("repo")
             }
         }
         
-        // Local maven repository for testing
-        maven {
-            name = "local"
-            url = uri(layout.buildDirectory.dir("repo"))
+        developers {
+            developer {
+                id.set(pomDeveloperId)
+                name.set(pomDeveloperName)
+            }
+        }
+        
+        scm {
+            url.set(pomScmUrl)
+            connection.set(pomScmConnection)
+            developerConnection.set(pomScmDevConnection)
         }
     }
-}
-
-// Configure signing for all publications
-signing {
-    // Use in-memory signing key for CI environments
-    val signingKey = project.findProperty("signing.key") as String? 
-        ?: System.getenv("GPG_PRIVATE_KEY")
-    val signingPassword = project.findProperty("signing.password") as String? 
-        ?: System.getenv("GPG_PASSPHRASE")
     
-    if (signingKey != null && signingPassword != null) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
-    }
-    
-    // Sign all publications
-    sign(publishing.publications)
-}
-
-// Make signing required only when publishing to sonatype (not for local testing)
-tasks.withType<Sign>().configureEach {
-    onlyIf { 
-        gradle.taskGraph.hasTask(":shared:publishAllPublicationsToSonatypeRepository") ||
-        gradle.taskGraph.hasTask(":shared:publishToSonatype")
-    }
+    // Configure coordinates
+    coordinates(libraryGroup, libraryArtifactId, libraryVersion)
 }
